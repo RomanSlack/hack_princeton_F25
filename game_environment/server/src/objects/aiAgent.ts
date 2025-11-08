@@ -391,8 +391,8 @@ export class AIAgent extends GameObject {
 
         // Start smooth movement to target
         const distance = Vec.len(offset);
-        const moveSpeed = 0.15; // units per millisecond (150 units/second)
-        const duration = distance / moveSpeed; // Calculate duration based on distance
+        const moveSpeed = 0.05; // units per millisecond (50 units/second - much slower for smooth glide)
+        const duration = Math.max(distance / moveSpeed, 200); // Minimum 200ms for very smooth animation
 
         this.moveTarget = targetPosition;
         this.moveStartPos = Vec.clone(this.position);
@@ -421,8 +421,12 @@ export class AIAgent extends GameObject {
             this.moveStartPos = null;
             game.grid.updateObject(this);
         } else {
-            // Interpolate position using ease-out quad for smooth deceleration
-            const easeProgress = 1 - Math.pow(1 - progress, 2);
+            // Interpolate position using ease-in-out cubic for ultra-smooth motion
+            // Starts slow, speeds up, then slows down again
+            const easeProgress = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
             this.position = Vec.add(
                 this.moveStartPos,
                 Vec.scale(Vec.sub(this.moveTarget, this.moveStartPos), easeProgress)
