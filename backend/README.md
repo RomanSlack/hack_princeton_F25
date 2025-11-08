@@ -119,7 +119,7 @@ curl -X POST http://localhost:8000/add-agent \
     {
       "id": "explore_agent",
       "type": "agent",
-      "model": "claude-3-5-sonnet-20241022",
+      "model": "openai/gpt-5",
       "system_prompt": "You are exploring the world peacefully.",
       "user_prompt": "What do you want to do?",
       "tool_connections": [
@@ -131,7 +131,7 @@ curl -X POST http://localhost:8000/add-agent \
     {
       "id": "defend_agent",
       "type": "agent",
-      "model": "claude-3-5-sonnet-20241022",
+      "model": "openai/gpt-5",
       "system_prompt": "You are under attack! Defend yourself.",
       "user_prompt": "Choose your defensive action.",
       "tool_connections": [
@@ -171,6 +171,62 @@ curl -X POST http://localhost:8000/add-agent \
     }
   ]
 }'
+```
+
+**Visual Flow Diagram:**
+
+```mermaid
+graph TD
+    %% Entry Points (Action Blocks)
+    onStart([onStart<br/>Action Block])
+    onAttacked([onAttacked<br/>Action Block])
+
+    %% Agent Blocks (Decision Points)
+    explore[explore_agent<br/>Agent Block<br/>LLM decides: move/collect/plan]
+    defend[defend_agent<br/>Agent Block<br/>LLM decides: attack/move]
+
+    %% Tool Blocks
+    move1[move_1<br/>Tool: move]
+    move2[move_2<br/>Tool: move]
+    collect1[collect_1<br/>Tool: collect]
+    plan1[plan_1<br/>Tool: plan]
+    attack1[attack_1<br/>Tool: attack]
+
+    %% Terminal node
+    end1((End))
+
+    %% Entry point connections
+    onStart --> explore
+    onAttacked --> defend
+
+    %% Explore agent connections (3 tools)
+    explore -->|choose move| move1
+    explore -->|choose collect| collect1
+    explore -->|choose plan| plan1
+
+    %% Defend agent connections (2 tools)
+    defend -->|choose attack| attack1
+    defend -->|choose move| move2
+
+    %% Tool loops back to explore
+    move1 --> explore
+    collect1 --> explore
+    plan1 --> explore
+    move2 --> explore
+
+    %% Attack ends the flow
+    attack1 --> end1
+
+    %% Styling
+    classDef actionStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef agentStyle fill:#fff9c4,stroke:#f57f17,stroke-width:3px
+    classDef toolStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef endStyle fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px
+
+    class onStart,onAttacked actionStyle
+    class explore,defend agentStyle
+    class move1,move2,collect1,plan1,attack1 toolStyle
+    class end1 endStyle
 ```
 
 ---
