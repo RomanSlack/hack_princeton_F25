@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Backend port - update if your backend runs on a different port
 const BACKEND_URL = 'http://localhost:8001';
@@ -313,7 +314,7 @@ export default function AgentGameBuilder() {
         };
         setConnections([...connections, newConnection]);
       } else {
-        alert('Invalid connection! Actions/Tools connect to Agents. Agents connect to Tools.');
+        toast.error('Invalid connection! Actions/Tools connect to Agents. Agents connect to Tools.');
       }
 
       setConnectingFrom(null);
@@ -372,14 +373,14 @@ export default function AgentGameBuilder() {
   // Deploy agent to backend
   const handleDeploy = async () => {
     if (!agentId.trim()) {
-      alert('Please enter an Agent ID!');
+      toast.error('Please enter an Agent ID!');
       return;
     }
 
     // Validate at least one onStart block
     const hasOnStart = blocks.some(b => b.blockType === 'action' && b.action_type === 'onStart');
     if (!hasOnStart) {
-      alert('You must have at least one "On Start" block!');
+      toast.error('You must have at least one "On Start" block!');
       return;
     }
 
@@ -446,10 +447,10 @@ export default function AgentGameBuilder() {
       }
 
       const result = await response.json();
-      alert(`Agent "${result.agent_id}" deployed successfully!\nCurrent node: ${result.current_node}`);
+      toast.success(`Agent "${result.agent_id}" deployed successfully! Current node: ${result.current_node}`);
     } catch (error) {
       console.error('Deployment error:', error);
-      alert(`Deployment failed: ${error.message}`);
+      toast.error(`Deployment failed: ${error.message}`);
     } finally {
       setDeploying(false);
     }
@@ -893,6 +894,48 @@ export default function AgentGameBuilder() {
           }}
         />
       )}
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: theme.isDark ? '#1f2937' : '#ffffff',
+            color: theme.isDark ? '#ffffff' : '#111827',
+            border: `2px solid ${theme.isDark ? '#374151' : '#d1d5db'}`,
+            borderRadius: '8px',
+            padding: '16px 20px',
+            fontSize: '15px',
+            fontWeight: '600',
+            boxShadow: theme.isDark 
+              ? '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)'
+              : '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+          },
+          success: {
+            style: {
+              background: theme.isDark ? '#064e3b' : '#d1fae5',
+              color: theme.isDark ? '#ffffff' : '#065f46',
+              border: `2px solid ${theme.isDark ? '#10b981' : '#10b981'}`,
+            },
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            style: {
+              background: theme.isDark ? '#7f1d1d' : '#fee2e2',
+              color: theme.isDark ? '#ffffff' : '#991b1b',
+              border: `2px solid ${theme.isDark ? '#ef4444' : '#ef4444'}`,
+            },
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#ffffff',
+            },
+          },
+        }}
+      />
     </div>
   );
 }
@@ -905,7 +948,7 @@ function AgentConfigModal({ block, onSave, onDelete, onClose }) {
 
   const handleSave = () => {
     if (!systemPrompt.trim() || !userPrompt.trim()) {
-      alert('Please fill in both prompts!');
+      toast.error('Please fill in both prompts!');
       return;
     }
     onSave({ model, system_prompt: systemPrompt, user_prompt: userPrompt });
