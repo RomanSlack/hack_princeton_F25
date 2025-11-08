@@ -7,8 +7,12 @@ Run this after starting the backend server.
 import requests
 import json
 import time
+import os
+from dotenv import load_dotenv
 
-BACKEND_URL = "http://localhost:8001"
+load_dotenv()
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8001")
 
 def create_aggressive_agent():
     """Create an aggressive agent that prioritizes attacking"""

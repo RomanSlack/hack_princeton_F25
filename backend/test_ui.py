@@ -7,10 +7,14 @@ Then open: http://localhost:5000
 from flask import Flask, render_template_string, request, jsonify
 import requests
 import json
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-GAME_SERVER = "http://localhost:8000"
+GAME_SERVER = os.getenv("GAME_SERVER_URL", "http://localhost:8000")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>

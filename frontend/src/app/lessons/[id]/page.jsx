@@ -156,8 +156,13 @@ export default function LessonPage() {
   );
 }
 
-// Backend port - update if your backend runs on a different port
-const BACKEND_URL = 'http://localhost:8001';
+// Backend URL - configurable via environment variable
+// For local dev: http://localhost:8001
+// For production: https://your-backend.run.app
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+
+// Game client URL - configurable via environment variable
+const GAME_CLIENT_URL = process.env.NEXT_PUBLIC_GAME_CLIENT_URL || 'http://localhost:3000';
 
 // Available models (sorted by speed/cost, fastest first)
 const MODELS = [
@@ -1290,7 +1295,7 @@ function LessonBuilder({ lesson, config }) {
               <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
                 <h3 className={`text-xs font-bold ${theme.text.primary} uppercase tracking-wide`}>Game Preview</h3>
                 <a
-                  href="http://localhost:3000"
+                  href={GAME_CLIENT_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:text-blue-800 transition"
@@ -1301,7 +1306,7 @@ function LessonBuilder({ lesson, config }) {
               </div>
               <div className={`flex-1 relative bg-slate-900 dark:bg-slate-950 rounded-lg border-2 ${theme.border.secondary} overflow-hidden shadow-inner min-h-0`}>
                 <iframe
-                  src="http://localhost:3000"
+                  src={GAME_CLIENT_URL}
                   className="w-full h-full border-0"
                   title="Game Environment"
                   allow="fullscreen"

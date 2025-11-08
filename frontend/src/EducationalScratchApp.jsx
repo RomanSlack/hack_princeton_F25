@@ -6,6 +6,9 @@ import HintSystem from './components/HintSystem';
 import InfoCard from './components/InfoCard';
 import ChallengePanel from './components/ChallengePanel';
 
+// Game client URL - configurable via environment variable
+const GAME_CLIENT_URL = process.env.NEXT_PUBLIC_GAME_CLIENT_URL || 'http://localhost:3000';
+
 /**
  * EducationalScratchApp - Full Educational Experience
  * Interactive, hands-on learning for Agentic AI concepts
@@ -395,7 +398,7 @@ function EducationalScratchApp() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-bold text-gray-700">Live Game Environment</h3>
             <a
-              href="http://localhost:3000"
+              href={GAME_CLIENT_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition"
@@ -406,7 +409,7 @@ function EducationalScratchApp() {
           </div>
           <div className="relative w-full aspect-square bg-gray-900 rounded-lg border-2 border-gray-300 overflow-hidden shadow-lg">
             <iframe
-              src="http://localhost:3000"
+              src={GAME_CLIENT_URL}
               className="w-full h-full border-0"
               title="Game Environment"
               allow="fullscreen"

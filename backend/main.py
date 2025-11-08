@@ -27,6 +27,7 @@ LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "5.0"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DAEDALUS_API_KEY = os.getenv("DEDALUS_API_KEY")
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "daedalus").lower()
+GAME_SERVER_URL = os.getenv("GAME_SERVER_URL", "http://localhost:8000")
 
 # Initialize OpenAI client for chat functionality
 openai_client = None
@@ -406,7 +407,8 @@ except Exception as e:
     raise
 
 # Initialize game environment client
-game_client = GameEnvironmentClient()
+game_client = GameEnvironmentClient(base_url=GAME_SERVER_URL)
+logger.info(f"🎮 Game server URL: {GAME_SERVER_URL}")
 
 
 @app.on_event("shutdown")

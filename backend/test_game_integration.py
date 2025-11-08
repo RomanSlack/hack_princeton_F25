@@ -6,8 +6,12 @@ Demonstrates the complete flow of running AI agents in the game
 import requests
 import time
 import json
+import os
+from dotenv import load_dotenv
 
-BACKEND_URL = "http://localhost:8001"
+load_dotenv()
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8001")
 
 def print_section(title):
     print("\n" + "="*60)
