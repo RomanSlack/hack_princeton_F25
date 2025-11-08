@@ -47,6 +47,8 @@ export interface PlayerData {
     username: string;
     dead: boolean;
     color: number;
+    xp?: number; // XP for display
+    level?: number; // Calculated level
 }
 
 export interface BulletData {
@@ -85,6 +87,8 @@ export interface UpdatePacket {
         health: number;
         ammo: { [type: string]: number };
         weapons: [string | null, string | null];
+        xp: number;
+        level: number;
     };
     spectatorData?: {
         spectatorId: number;

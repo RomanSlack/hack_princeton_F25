@@ -30,7 +30,11 @@ export class Bullet {
         this.direction = Vec.normalize(direction);
         this.rotation = Vec.direction(this.direction);
         this.speed = gun.speed;
-        this.damage = gun.damage;
+
+        // Apply damage multiplier from shooter's level
+        const multiplier = ('getStatMultiplier' in shooter) ? (shooter as any).getStatMultiplier() : 1;
+        this.damage = gun.damage * multiplier;
+
         this.maxRange = gun.range;
         this.shooter = shooter;
     }
@@ -74,7 +78,19 @@ export class Bullet {
 
             // Check if it's an Obstacle (has a definition property)
             if (closestHit.object instanceof Obstacle) {
+                const wasAlive = !closestHit.object.destroyed;
                 closestHit.object.damage(this.damage);
+
+                // If obstacle was just destroyed, spawn XP orbs
+                if (wasAlive && closestHit.object.destroyed) {
+                    const xpAmount = closestHit.object.definition.idString === "rock" ? 100 :
+                                   closestHit.object.definition.idString === "tree" ? 50 :
+                                   closestHit.object.definition.idString === "crate" ? 30 : 0;
+                    if (xpAmount > 0) {
+                        const orbCount = Math.ceil(xpAmount / 10); // 10 XP per orb
+                        game.spawnXPOrbs(closestHit.object.position, orbCount, 10);
+                    }
+                }
             } else {
                 // It's a Player or AIAgent
                 const damageable = closestHit.object as Damageable;

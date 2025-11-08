@@ -124,23 +124,39 @@ const ZONE_1_DATA = {
         { type: "ammo_556mm", x: 100, y: 300, count: 60 },
         { type: "ammo_12g", x: 350, y: 150, count: 16 },
         { type: "ammo_12g", x: 200, y: 450, count: 16 },
-        { type: "ammo_12g", x: 450, y: 250, count: 16 }
+        { type: "ammo_12g", x: 450, y: 250, count: 16 },
+
+        // XP Orbs scattered around the map
+        { type: "xp_orb", x: 80, y: 80, count: 10 },
+        { type: "xp_orb", x: 200, y: 100, count: 10 },
+        { type: "xp_orb", x: 420, y: 120, count: 10 },
+        { type: "xp_orb", x: 100, y: 220, count: 10 },
+        { type: "xp_orb", x: 300, y: 250, count: 10 },
+        { type: "xp_orb", x: 450, y: 280, count: 10 },
+        { type: "xp_orb", x: 180, y: 350, count: 10 },
+        { type: "xp_orb", x: 350, y: 380, count: 10 },
+        { type: "xp_orb", x: 120, y: 450, count: 10 },
+        { type: "xp_orb", x: 430, y: 470, count: 10 },
+        { type: "xp_orb", x: 256, y: 356, count: 10 },
+        { type: "xp_orb", x: 380, y: 220, count: 10 },
     ],
 
     playerSpawns: [
-        { x: 256, y: 256 },
-        { x: 100, y: 100 },
-        { x: 400, y: 400 },
-        { x: 100, y: 400 },
-        { x: 400, y: 100 },
-        { x: 150, y: 256 },
-        { x: 362, y: 256 },
-        { x: 256, y: 150 },
-        { x: 256, y: 362 },
-        { x: 180, y: 180 },
-        { x: 332, y: 332 },
-        { x: 180, y: 332 },
-        { x: 332, y: 180 }
+        // Center is at 256, 256
+        // All spawns within 20 units of center (236-276 range)
+        { x: 256, y: 256 },  // Dead center
+        { x: 240, y: 256 },  // Left
+        { x: 272, y: 256 },  // Right
+        { x: 256, y: 240 },  // Top
+        { x: 256, y: 272 },  // Bottom
+        { x: 240, y: 240 },  // Top-left
+        { x: 272, y: 240 },  // Top-right
+        { x: 240, y: 272 },  // Bottom-left
+        { x: 272, y: 272 },  // Bottom-right
+        { x: 246, y: 256 },  // Mid-left
+        { x: 266, y: 256 },  // Mid-right
+        { x: 256, y: 246 },  // Mid-top
+        { x: 256, y: 266 },  // Mid-bottom
     ]
 };
 

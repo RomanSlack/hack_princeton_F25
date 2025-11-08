@@ -182,7 +182,9 @@ export class Game {
                         weapons: [
                             player.weapons[0]?.definition.idString ?? null,
                             player.weapons[1]?.definition.idString ?? null
-                        ] as [string | null, string | null]
+                        ] as [string | null, string | null],
+                        xp: player.xp,
+                        level: player.getLevel()
                     }
                 };
                 player.socket.send(JSON.stringify(personalizedPacket));
@@ -305,7 +307,13 @@ export class Game {
 
             const distSquared = Geometry.distanceSquared(player.position, loot.position);
             if (distSquared <= pickupRadiusSquared) {
-                if (loot.type.startsWith("ammo_")) {
+                if (loot.type === "xp_orb") {
+                    // XP orb pickup
+                    player.addXP(loot.count);
+                    loot.picked = true;
+                    loot.dead = true;
+                    console.log(`[Game] ${player.username} picked up ${loot.count} XP`);
+                } else if (loot.type.startsWith("ammo_")) {
                     const ammoType = loot.type.replace("ammo_", "");
                     player.addAmmo(ammoType, loot.count);
                     loot.picked = true;
@@ -321,6 +329,18 @@ export class Game {
                     }
                 }
             }
+        }
+    }
+
+    spawnXPOrbs(position: Vector, count: number, xpPerOrb: number): void {
+        // Spawn multiple XP orbs in a small radius around the position
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count;
+            const radius = 2 + Math.random() * 3; // 2-5 units spread
+            const orbPosition = Vec.add(position, Vec(Math.cos(angle) * radius, Math.sin(angle) * radius));
+
+            const xpOrb = new Loot(this.nextLootId++, "xp_orb", orbPosition, xpPerOrb);
+            this.loot.push(xpOrb);
         }
     }
 

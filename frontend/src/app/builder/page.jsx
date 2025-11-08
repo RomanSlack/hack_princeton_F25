@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -74,15 +74,19 @@ const INSTRUCTIONS = [
 
 export default function AgentGameBuilder() {
   const theme = useTheme();
+  const [isClient, setIsClient] = useState(false);
+
+  // Initialize state - always start with empty on server
   const [blocks, setBlocks] = useState([]);
   const [connections, setConnections] = useState([]);
+  const [agentId, setAgentId] = useState('');
+
   const [draggedBlock, setDraggedBlock] = useState(null);
   const [draggingFromPalette, setDraggingFromPalette] = useState(null);
   const [connectingFrom, setConnectingFrom] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [currentInstruction, setCurrentInstruction] = useState(0);
   const [configModalBlock, setConfigModalBlock] = useState(null);
-  const [agentId, setAgentId] = useState('');
   const [deploying, setDeploying] = useState(false);
   const [isOverTrash, setIsOverTrash] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
@@ -92,7 +96,58 @@ export default function AgentGameBuilder() {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const canvasRef = useRef(null);
+
   const blockIdCounter = useRef(0);
+
+  // Load from localStorage only on client side after mount
+  useEffect(() => {
+    setIsClient(true);
+    try {
+      const savedBlocks = localStorage.getItem('agent-builder-blocks');
+      const savedConnections = localStorage.getItem('agent-builder-connections');
+      const savedAgentId = localStorage.getItem('agent-builder-agentId');
+      const savedBlockCounter = localStorage.getItem('agent-builder-blockCounter');
+
+      if (savedBlocks) setBlocks(JSON.parse(savedBlocks));
+      if (savedConnections) setConnections(JSON.parse(savedConnections));
+      if (savedAgentId) setAgentId(savedAgentId);
+      if (savedBlockCounter) blockIdCounter.current = parseInt(savedBlockCounter, 10);
+    } catch (error) {
+      console.error('Error loading from localStorage:', error);
+    }
+  }, []);
+
+  // Save to localStorage whenever state changes (only on client)
+  useEffect(() => {
+    if (!isClient) return; // Don't save on initial mount
+
+    try {
+      localStorage.setItem('agent-builder-blocks', JSON.stringify(blocks));
+      localStorage.setItem('agent-builder-blockCounter', blockIdCounter.current.toString());
+    } catch (error) {
+      console.error('Error saving blocks:', error);
+    }
+  }, [blocks, isClient]);
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    try {
+      localStorage.setItem('agent-builder-connections', JSON.stringify(connections));
+    } catch (error) {
+      console.error('Error saving connections:', error);
+    }
+  }, [connections, isClient]);
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    try {
+      localStorage.setItem('agent-builder-agentId', agentId);
+    } catch (error) {
+      console.error('Error saving agentId:', error);
+    }
+  }, [agentId, isClient]);
 
   // Zoom controls
   const handleZoomIn = () => {
@@ -121,6 +176,19 @@ export default function AgentGameBuilder() {
       // Reset zoom and pan to defaults
       setZoom(1);
       setPanOffset({ x: 0, y: 0 });
+
+      // Clear localStorage
+      try {
+        localStorage.removeItem('agent-builder-blocks');
+        localStorage.removeItem('agent-builder-connections');
+        localStorage.removeItem('agent-builder-agentId');
+        localStorage.removeItem('agent-builder-blockCounter');
+        setAgentId('');
+        blockIdCounter.current = 0;
+        toast.success('Canvas cleared and localStorage reset!');
+      } catch (error) {
+        console.error('Error clearing localStorage:', error);
+      }
     }
   };
 

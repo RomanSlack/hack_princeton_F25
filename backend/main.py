@@ -7,6 +7,7 @@ from dedalus_labs import AsyncDedalus, DedalusRunner
 from dotenv import load_dotenv
 import logging
 import asyncio
+import os
 from game_client import GameEnvironmentClient
 
 load_dotenv()
@@ -17,6 +18,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+DEFAULT_STEP_DELAY = float(os.getenv("STEP_DELAY", "6.0"))
 
 
 # Pydantic Models for Block Types
@@ -124,6 +128,7 @@ class AgentState(BaseModel):
     program: ProgramSchema
     current_node: Optional[str] = None
     current_plan: Optional[str] = None
+    last_agent_block: Optional[str] = None  # Track the last agent block executed for looping
 
 
 class GameState(BaseModel):
@@ -199,7 +204,7 @@ class GameSession:
         self.registered_agents: Dict[str, bool] = {}  # agent_id -> registered in game
         self.step_count = 0
         self.auto_stepping = False
-        self.step_delay = 1.0  # seconds between auto steps
+        self.step_delay = DEFAULT_STEP_DELAY  # seconds between auto steps (from .env)
 
 game_session = GameSession()
 
@@ -294,8 +299,15 @@ async def execute_agent_block(
         f"{agent_block.user_prompt}\n\n"
         f"Current game state: {game_state_str}\n\n"
         f"Available actions:\n" + "\n".join(f"- {info}" for info in available_tools_info) + "\n\n"
-        f"Respond with nothing but a JSON object containing 'action' (the action name) and 'parameters' (an object with the required parameters). Note the move tool takes in *relative* coordinates, and you can't move outside the box given by (-250, -250) and (250, 250).\n"
-        f"Example: {{\"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -2}}}}"
+        f"IMPORTANT MOVEMENT RULES:\n"
+        f"- The move tool uses RELATIVE coordinates (how much to move, not where to move to)\n"
+        f"- The map bounds are x: 8-504, y: 8-504 (Zone 1 main arena)\n"
+        f"- Keep movements SMALL and gradual (recommended: -20 to +20 per move)\n"
+        f"- Y-axis: NEGATIVE y moves UP (toward y=8), POSITIVE y moves DOWN (toward y=504)\n"
+        f"- X-axis: NEGATIVE x moves LEFT (toward x=8), POSITIVE x moves RIGHT (toward x=504)\n"
+        f"- Large movements will cause you to crash into walls!\n\n"
+        f"Respond with nothing but a JSON object containing 'reasoning' (a brief 1-sentence explanation), 'action' (the action name), and 'parameters' (an object with the required parameters).\n"
+        f"Example: {{\"reasoning\": \"Moving toward the center to find loot\", \"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -10}}}}"
     )
 
     full_input = agent_block.system_prompt + "\n\n" + user_input
@@ -323,13 +335,44 @@ async def execute_agent_block(
 
     # Try to parse JSON response
     import json
+    import re
+
     try:
-        response_json = json.loads(response.final_output.strip())
+        # Strip markdown code blocks if present (```json ... ``` or ``` ... ```)
+        response_text = response.final_output.strip()
+
+        # Remove markdown code block markers
+        if response_text.startswith("```"):
+            # Extract content between ``` markers
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response_text, re.DOTALL)
+            if match:
+                response_text = match.group(1).strip()
+
+        response_json = json.loads(response_text)
+        reasoning = response_json.get("reasoning", "No reasoning provided")
         tool_choice = response_json.get("action", "").lower()
         parameters = response_json.get("parameters", {})
-    except json.JSONDecodeError:
-        logger.warning(f"Failed to parse JSON response, attempting fallback parsing")
+
+        # Clamp movement parameters to prevent huge jumps
+        if tool_choice == "move" and parameters:
+            max_move = 25  # Maximum move distance per step
+            if "x" in parameters:
+                original_x = parameters["x"]
+                parameters["x"] = max(-max_move, min(max_move, parameters["x"]))
+                if abs(original_x) > max_move:
+                    logger.warning(f"Clamped x movement from {original_x} to {parameters['x']}")
+            if "y" in parameters:
+                original_y = parameters["y"]
+                parameters["y"] = max(-max_move, min(max_move, parameters["y"]))
+                if abs(original_y) > max_move:
+                    logger.warning(f"Clamped y movement from {original_y} to {parameters['y']}")
+
+        # Log the reasoning
+        logger.info(f"🤔 Agent Reasoning: {reasoning}")
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse JSON response: {e}, attempting fallback parsing")
         # Fallback: try to extract just the tool name
+        reasoning = "Failed to parse response"
         tool_choice = response.final_output.strip().lower()
         parameters = {}
 
@@ -340,7 +383,7 @@ async def execute_agent_block(
         tool_choice = available_tools[0]
         parameters = {}
 
-    logger.info(f"Selected tool: {tool_choice} with parameters: {parameters}")
+    logger.info(f"✅ Selected tool: {tool_choice} with parameters: {parameters}")
 
     return tool_choice, parameters
 
@@ -596,13 +639,13 @@ async def execute_game_step():
 
 
 @app.post("/start-auto-stepping")
-async def start_auto_stepping(step_delay: float = 1.0):
+async def start_auto_stepping(step_delay: Optional[float] = None):
     """
     Start automatic stepping at specified interval.
 
     Args:
-        step_delay: Delay in seconds between steps (default: 1.0)
-    """
+        step_delay: Delay in seconds between steps (default: from STEP_DELAY env variable, currently {})
+    """.format(DEFAULT_STEP_DELAY)
     if not game_session.active:
         raise HTTPException(
             status_code=400,
@@ -616,7 +659,7 @@ async def start_auto_stepping(step_delay: float = 1.0):
         )
 
     game_session.auto_stepping = True
-    game_session.step_delay = step_delay
+    game_session.step_delay = step_delay if step_delay is not None else DEFAULT_STEP_DELAY
 
     # Start background task
     asyncio.create_task(auto_step_loop())
@@ -775,13 +818,19 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
             current_node_id = action_block.next
             agent_state.current_node = current_node_id
 
-    # If there's no current node, return None for the action
+    # If there's no current node, fall back to the last agent block (for looping)
     if not current_node_id:
-        return NextStepResponse(
-            agent_id=agent_id,
-            action=None,
-            current_node=None
-        )
+        if agent_state.last_agent_block:
+            logger.info(f"No current node, falling back to last agent block: {agent_state.last_agent_block}")
+            current_node_id = agent_state.last_agent_block
+            agent_state.current_node = current_node_id
+        else:
+            logger.warning(f"No current node and no last agent block for agent {agent_id}")
+            return NextStepResponse(
+                agent_id=agent_id,
+                action=None,
+                current_node=None
+            )
 
     # Find the current block
     current_block = None
@@ -803,6 +852,9 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
             status_code=400,
             detail=f"Current node '{current_node_id}' is not an agent block. Only agent blocks can be executed via this endpoint."
         )
+
+    # Track this agent block for looping
+    agent_state.last_agent_block = current_block.id
 
     # Execute the agent block using Dedalus
     tool_choice, parameters = await execute_agent_block(

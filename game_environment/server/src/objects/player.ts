@@ -17,6 +17,7 @@ export class Player extends GameObject {
     maxHealth: number;
     speed: number;
     color: number;
+    xp: number = 0; // XP tracking
 
     weapons: [Gun | null, Gun | null] = [null, null];
     activeWeaponIndex: 0 | 1 = 0;
@@ -37,8 +38,9 @@ export class Player extends GameObject {
 
         this.username = username;
         this.socket = socket;
-        this.health = GameConstants.PLAYER_MAX_HEALTH;
-        this.maxHealth = GameConstants.PLAYER_MAX_HEALTH;
+        const healthMultiplier = this.getStatMultiplier();
+        this.health = GameConstants.PLAYER_MAX_HEALTH * healthMultiplier;
+        this.maxHealth = GameConstants.PLAYER_MAX_HEALTH * healthMultiplier;
         this.speed = GameConstants.PLAYER_SPEED;
         this.color = color;
 
@@ -65,7 +67,9 @@ export class Player extends GameObject {
             // Normalize diagonal movement
             const movement = Vec.normalize(Vec(moveX, moveY));
             // Speed is 0.08 units per millisecond, multiply by tick interval (~25ms)
-            const velocity = Vec.scale(movement, this.speed * 25);
+            // Apply stat multiplier from level
+            const effectiveSpeed = this.speed * this.getStatMultiplier();
+            const velocity = Vec.scale(movement, effectiveSpeed * 25);
             const newPosition = Vec.add(this.position, velocity);
 
             // Check collision with obstacles
@@ -196,12 +200,26 @@ export class Player extends GameObject {
         this.ammo.set(ammoType, current + count);
     }
 
-    damage(amount: number, source?: Player): void {
+    damage(amount: number, source?: Player | any): void {
         if (this.dead) return;
 
         this.health -= amount;
+
+        // Lose XP when hit (20% of damage as XP loss, min 5 XP)
+        const xpLoss = Math.max(5, Math.floor(amount * 0.2));
+        this.xp = Math.max(0, this.xp - xpLoss);
+
+        // Attacker gains XP (10 XP per hit)
+        if (source && 'xp' in source && source !== this) {
+            source.xp += 10;
+        }
+
         if (this.health <= 0) {
             this.health = 0;
+            // On death, attacker gets kill bonus XP (50 XP)
+            if (source && 'xp' in source && source !== this) {
+                source.xp += 50;
+            }
             this.die();
         }
     }
@@ -209,6 +227,21 @@ export class Player extends GameObject {
     die(): void {
         this.dead = true;
         this.health = 0;
+    }
+
+    addXP(amount: number): void {
+        this.xp += amount;
+    }
+
+    getLevel(): number {
+        // 100 XP per level
+        return Math.floor(this.xp / 100);
+    }
+
+    getStatMultiplier(): number {
+        // 5% increase per level
+        const level = this.getLevel();
+        return 1 + (level * 0.05);
     }
 
     serialize(): PlayerData {
@@ -221,7 +254,9 @@ export class Player extends GameObject {
             activeWeapon: this.activeWeaponIndex,
             username: this.username,
             dead: this.dead,
-            color: this.color
+            color: this.color,
+            xp: this.xp,
+            level: this.getLevel()
         };
     }
 }
