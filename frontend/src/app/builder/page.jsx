@@ -7,13 +7,23 @@ import toast, { Toaster } from 'react-hot-toast';
 // Backend port - update if your backend runs on a different port
 const BACKEND_URL = 'http://localhost:8001';
 
-// Available models
+// Available models (sorted by speed/cost, fastest first)
 const MODELS = [
-  { value: 'openai/gpt-4o', label: 'GPT-4o' },
-  { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
+  // Fast & cheap mini models
+  { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Fast)' },
+  { value: 'anthropic/claude-3.5-haiku', label: 'Claude 3.5 Haiku (Fast)' },
+  { value: 'google/gemini-flash-1.5', label: 'Gemini 1.5 Flash (Fast)' },
+  { value: 'meta-llama/llama-3.1-8b-instruct', label: 'Llama 3.1 8B (Fast)' },
+
+  // Mid-tier models
   { value: 'openai/gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+  { value: 'google/gemini-pro-1.5', label: 'Gemini 1.5 Pro' },
+  { value: 'meta-llama/llama-3.1-70b-instruct', label: 'Llama 3.1 70B' },
+
+  // Premium models (slower but more capable)
+  { value: 'openai/gpt-4o', label: 'GPT-4o' },
   { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-  { value: 'anthropic/claude-3.5-haiku', label: 'Claude 3.5 Haiku' },
+  { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus' },
 ];
 
 // Block type definitions matching backend expectations

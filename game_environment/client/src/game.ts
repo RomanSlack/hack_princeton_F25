@@ -14,6 +14,7 @@ interface RenderObject {
     position: Vector;
     rotation: number;
     nameText?: PIXI.Text;
+    xpText?: PIXI.Text;
     leavesContainer?: PIXI.Container; // Separate container for tree leaves (rendered above players)
 }
 
@@ -198,6 +199,10 @@ export class GameClient {
                     this.app.stage.removeChild(obj.nameText);
                     obj.nameText.destroy();
                 }
+                if (obj.xpText) {
+                    this.app.stage.removeChild(obj.xpText);
+                    obj.xpText.destroy();
+                }
                 this.playerSprites.delete(id);
             }
         }
@@ -214,6 +219,11 @@ export class GameClient {
             }
             renderObj.position = Vec(playerData.x, playerData.y);
             renderObj.rotation = playerData.rotation;
+
+            // Update XP text
+            if (renderObj.xpText) {
+                renderObj.xpText.text = `${playerData.xp || 0} XP`;
+            }
 
             // Update player dead state
             if (playerData.dead) {
@@ -353,6 +363,8 @@ export class GameClient {
             // Hide HUD for spectators, show spectator indicator
             this.hud.showSpectatorMode();
             document.getElementById('hud')!.style.display = 'none';
+            const xpDisplay = document.getElementById('xp-display');
+            if (xpDisplay) xpDisplay.style.display = 'none';
         }
 
         // Update lighting system with obstacle data - DISABLED FOR DEBUG
@@ -406,10 +418,18 @@ export class GameClient {
 
             // Position name text above player (in world coordinates, then convert to screen)
             if (obj.nameText) {
-                const nameWorldPos = Vec.add(obj.position, Vec(0, -3.5));
+                const nameWorldPos = Vec.add(obj.position, Vec(0, -7.8));
                 const nameScreenPos = this.camera.worldToScreen(nameWorldPos);
                 obj.nameText.position.set(nameScreenPos.x, nameScreenPos.y);
                 obj.nameText.scale.set(this.camera.zoom);
+            }
+
+            // Position XP text below name text (overlapping slightly)
+            if (obj.xpText) {
+                const xpWorldPos = Vec.add(obj.position, Vec(0, -3.3));
+                const xpScreenPos = this.camera.worldToScreen(xpWorldPos);
+                obj.xpText.position.set(xpScreenPos.x, xpScreenPos.y);
+                obj.xpText.scale.set(this.camera.zoom);
             }
 
             // Highlight our player
@@ -519,23 +539,39 @@ export class GameClient {
         nameText.resolution = 4; // Higher resolution for crisp text at small sizes
         nameText.anchor.set(0.5, 1); // Anchor at bottom center
 
+        // XP text (smaller, below username)
+        const xpText = new PIXI.Text({
+            text: `${playerData.xp || 0} XP`,
+            style: {
+                fontSize: 4.5,
+                fill: 0xFFD700,
+                stroke: { color: 0x000000, width: 0.12 },
+                fontWeight: 'bold'
+            }
+        });
+        xpText.resolution = 4;
+        xpText.anchor.set(0.5, 1); // Anchor at bottom center
+
         container.addChild(shadow);
         container.addChild(body);
         container.addChild(highlight);
         container.addChild(direction);
         container.addChild(weaponSprite);
 
-        // Add nameText separately to stage so it doesn't rotate with player
+        // Add nameText and xpText separately to stage so they don't rotate with player
         container.zIndex = 20; // Game objects layer
         nameText.zIndex = 200; // UI layer (above lighting)
+        xpText.zIndex = 200; // UI layer (above lighting)
         this.app.stage.addChild(container);
         this.app.stage.addChild(nameText);
+        this.app.stage.addChild(xpText);
 
         return {
             container,
             position: Vec(playerData.x, playerData.y),
             rotation: playerData.rotation,
-            nameText
+            nameText,
+            xpText
         };
     }
 
