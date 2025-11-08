@@ -24,6 +24,7 @@ const MODELS = [
   { value: 'openai/gpt-4o', label: 'GPT-4o' },
   { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
   { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus' },
+  { value: 'xai/grok-4', label: 'Grok 4' },
 ];
 
 // Block type definitions matching backend expectations
