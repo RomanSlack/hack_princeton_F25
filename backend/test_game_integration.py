@@ -29,7 +29,7 @@ def add_agent(agent_id, username):
             {
                 "id": "decide_action",
                 "type": "agent",
-                "model": "claude-3-5-sonnet-20241022",
+                "model": "openai/gpt-5",
                 "system_prompt": "You are a battle royale AI agent. Make smart tactical decisions.",
                 "user_prompt": "Analyze the game state and choose your best next action. Consider nearby enemies, loot, and your current health.",
                 "tool_connections": [
@@ -73,10 +73,10 @@ def add_agent(agent_id, username):
 
 def start_session():
     """Start the game session and register all agents"""
-    response = requests.post(f"{BACKEND_URL}/start-game-session")
+    response = requests.post(f"{BACKEND_URL}/register-agents-in-game")
     response.raise_for_status()
     data = response.json()
-    print(f"✓ Game session started")
+    print(f"✓ Agents registered in game")
     print(f"  Agents registered: {data['agents_registered']}")
     for agent_id, result in data['registration_results'].items():
         if result.get('success'):
@@ -87,7 +87,7 @@ def start_session():
 
 def execute_step():
     """Execute one game step"""
-    response = requests.post(f"{BACKEND_URL}/game-step")
+    response = requests.post(f"{BACKEND_URL}/execute-game-step")
     response.raise_for_status()
     data = response.json()
     print(f"✓ Step {data['step']} completed - {data['agents_processed']} agents processed")
@@ -130,7 +130,7 @@ def get_status():
 
 def stop_session():
     """Stop the game session"""
-    response = requests.post(f"{BACKEND_URL}/stop-game-session")
+    response = requests.post(f"{BACKEND_URL}/cleanup-game-session")
     response.raise_for_status()
     data = response.json()
     print(f"✓ Game session stopped")

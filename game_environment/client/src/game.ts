@@ -392,14 +392,14 @@ export class GameClient {
         const nameText = new PIXI.Text({
             text: playerData.username,
             style: {
-                fontSize: 1.3,
+                fontSize: 16,
                 fill: 0xffffff,
-                stroke: { color: 0x000000, width: 0.2 },
+                stroke: { color: 0x000000, width: 3 },
                 fontWeight: 'bold'
             }
         });
         nameText.anchor.set(0.5, 0.5);
-        nameText.position.set(0, -4.8);
+        nameText.position.set(0, -60);
 
         container.addChild(shadow);
         container.addChild(body);

@@ -45,7 +45,7 @@ class AgentBlock(BaseModel):
     """Agent block - calls LLM to decide which tool to use"""
     id: str = Field(..., description="Unique identifier for this block")
     type: Literal["agent"] = "agent"
-    model: str = Field(..., description="LLM model to use (e.g., claude-3-5-sonnet-20241022)")
+    model: str = Field(..., description="LLM model to use (e.g., openai/gpt-5)")
     system_prompt: str = Field(..., description="System prompt for the LLM")
     user_prompt: str = Field(..., description="User prompt for the LLM")
     tool_connections: List[ToolConnection] = Field(
@@ -422,11 +422,11 @@ async def add_agent(program: ProgramSchema, register_in_game: bool = False, user
     }
 
 
-@app.post("/start-game-session")
-async def start_game_session():
+@app.post("/register-agents-in-game")
+async def register_agents_in_game():
     """
-    Start a game session by registering all agents in the game environment.
-    This must be called before executing game steps.
+    Register all backend agents in the game environment.
+    Call this after adding agents with /add-agent.
     """
     if game_session.active:
         raise HTTPException(
@@ -437,10 +437,10 @@ async def start_game_session():
     if not agents:
         raise HTTPException(
             status_code=400,
-            detail="No agents to start. Add agents first using /add-agent"
+            detail="No agents to register. Add agents first using /add-agent"
         )
 
-    logger.info(f"Starting game session with {len(agents)} agents")
+    logger.info(f"Registering {len(agents)} agents in game environment")
 
     # Register all agents that aren't already registered
     registration_results = {}
@@ -468,24 +468,23 @@ async def start_game_session():
 
     return {
         "success": True,
-        "session_active": True,
         "agents_registered": len(game_session.registered_agents),
         "registration_results": registration_results
     }
 
 
-@app.post("/game-step")
+@app.post("/execute-game-step")
 async def execute_game_step():
     """
-    Execute one game step for all agents:
-    1. Get game state for each agent
-    2. Process each agent through their LLM
+    Execute one game step for all agents using the existing Dedalus system:
+    1. Get game state for each agent from game environment
+    2. Call /next-step-for-agents for each agent (uses Dedalus LLM)
     3. Send actions back to game environment
     """
     if not game_session.active:
         raise HTTPException(
             status_code=400,
-            detail="No active game session. Call /start-game-session first"
+            detail="No active game session. Call /register-agents-in-game first"
         )
 
     registered_agents = list(game_session.registered_agents.keys())
@@ -501,7 +500,7 @@ async def execute_game_step():
     game_states = await game_client.batch_get_states(registered_agents)
     logger.info(f"Retrieved game states for {len(game_states)} agents")
 
-    # Step 2 & 3: Process each agent and send commands
+    # Step 2 & 3: Use existing next-step-for-agents endpoint for each agent
     step_results = {}
     for agent_id in registered_agents:
         if agent_id not in game_states:
@@ -515,66 +514,38 @@ async def execute_game_step():
             continue
 
         try:
-            agent_state = agents[agent_id]
             game_state_dict = game_states[agent_id]
 
-            # Convert to GameState model
-            game_state = GameState(**game_state_dict)
-
-            # Check if current node is an agent block
-            if not agent_state.current_node:
-                step_results[agent_id] = {"action": None, "reason": "No current node"}
-                continue
-
-            current_block = None
-            for block in agent_state.program.blocks:
-                if block.id == agent_state.current_node:
-                    current_block = block
-                    break
-
-            if not current_block or not isinstance(current_block, AgentBlock):
-                step_results[agent_id] = {"action": None, "reason": "Current node is not an agent block"}
-                continue
-
-            # Execute agent block
-            tool_choice, parameters = await execute_agent_block(
-                current_block,
-                game_state,
-                agent_state.program.blocks,
-                agent_state.current_plan
+            # Create request for existing next-step-for-agents endpoint
+            next_step_request = NextStepRequest(
+                agent_id=agent_id,
+                game_state=GameState(**game_state_dict)
             )
 
-            # Find the tool block
-            chosen_tool_block = None
-            for conn in current_block.tool_connections:
-                if conn.tool_name == tool_choice:
-                    for block in agent_state.program.blocks:
-                        if block.id == conn.tool_id:
-                            chosen_tool_block = block
-                            break
-                    break
+            # Call existing Dedalus-based next-step logic
+            next_step_response = await next_step_for_agents(next_step_request)
 
-            if not chosen_tool_block:
-                logger.error(f"Tool block for {tool_choice} not found")
-                step_results[agent_id] = {"error": f"Tool block for {tool_choice} not found"}
-                continue
+            # If there's an action, send it to the game environment
+            if next_step_response.action:
+                action = next_step_response.action
+                command_result = await game_client.send_command(
+                    agent_id,
+                    action.tool_type,
+                    action.parameters
+                )
 
-            # Store plan if applicable
-            if tool_choice == "plan" and "plan" in parameters:
-                agent_state.current_plan = parameters["plan"]
-
-            # Update agent's current node
-            agent_state.current_node = chosen_tool_block.next
-
-            # Send command to game environment
-            command_result = await game_client.send_command(agent_id, tool_choice, parameters)
-
-            step_results[agent_id] = {
-                "action": tool_choice,
-                "parameters": parameters,
-                "next_node": agent_state.current_node,
-                "game_response": command_result.get("success", False)
-            }
+                step_results[agent_id] = {
+                    "action": action.tool_type,
+                    "parameters": action.parameters,
+                    "next_node": next_step_response.current_node,
+                    "game_response": command_result.get("success", False)
+                }
+            else:
+                step_results[agent_id] = {
+                    "action": None,
+                    "reason": "No action from agent",
+                    "next_node": next_step_response.current_node
+                }
 
         except Exception as e:
             logger.error(f"Error processing agent {agent_id}: {e}")
@@ -601,7 +572,7 @@ async def start_auto_stepping(step_delay: float = 1.0):
     if not game_session.active:
         raise HTTPException(
             status_code=400,
-            detail="No active game session. Call /start-game-session first"
+            detail="No active game session. Call /register-agents-in-game first"
         )
 
     if game_session.auto_stepping:
@@ -635,8 +606,8 @@ async def stop_auto_stepping():
     }
 
 
-@app.post("/stop-game-session")
-async def stop_game_session():
+@app.post("/cleanup-game-session")
+async def cleanup_game_session():
     """
     Stop the game session and clean up all agents from the game environment.
     """
