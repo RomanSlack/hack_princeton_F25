@@ -208,12 +208,20 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
                       
                       {/* Lesson Name */}
                       <td className="py-3 px-3">
-                        <div className="flex items-center gap-2">
+                        <a
+                          href="/builder"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 hover:text-blue-400 transition-colors group"
+                        >
                           <div>
-                            <div className="font-medium text-sm">{lesson.title}</div>
+                            <div className="font-medium text-sm group-hover:underline">{lesson.title}</div>
                             <div className="text-xs text-gray-400">{lesson.focus}</div>
                           </div>
-                        </div>
+                          <svg className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </td>
                       
                       {/* Difficulty */}

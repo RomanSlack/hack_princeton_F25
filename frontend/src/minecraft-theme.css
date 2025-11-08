@@ -1,0 +1,439 @@
+/**
+ * Minecraft/Code.org Style Theme
+ * Blocky, colorful interface with jigsaw-puzzle block shapes
+ */
+
+/* ============================================
+   1. MAIN COLOR PALETTE & LAYOUT
+   ============================================ */
+
+/* Header Bar - Dark teal/gray like Minecraft */
+.header-bar,
+header,
+nav {
+  background: linear-gradient(180deg, #4a7c8c 0%, #3d6b7a 100%) !important;
+  border-bottom: 3px solid #2a5563 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Override any white backgrounds in header */
+header *,
+nav * {
+  color: white !important;
+}
+
+/* Workspace Area - Light gray solid background */
+.workspace-area,
+.canvas,
+[class*="canvas"] {
+  background: #e8e8e8 !important;
+  background-image: none !important;
+}
+
+/* Block Palette (Left Sidebar) - Medium gray */
+.block-palette,
+aside,
+[class*="sidebar"] {
+  background: #4d4d4d !important;
+  border-right: 3px solid #3a3a3a !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Block Palette Text */
+.block-palette *,
+aside *,
+[class*="sidebar"] * {
+  color: #f0f0f0 !important;
+}
+
+/* Instructions Panel - Dark gray bar at top */
+.instructions-panel,
+[class*="challenge"],
+[class*="hint"] {
+  background: #3e3e3e !important;
+  border: 2px solid #2a2a2a !important;
+  border-radius: 4px !important;
+  padding: 12px 16px !important;
+  color: white !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.instructions-panel h3,
+.instructions-panel p {
+  color: white !important;
+  margin: 4px 0 !important;
+}
+
+/* ============================================
+   2. BUTTONS
+   ============================================ */
+
+/* Main "Run" Button - Large bright yellow */
+.run-button,
+button[class*="run"],
+button[class*="Run"],
+button:has(svg):contains("Run") {
+  background: linear-gradient(180deg, #ffd54f 0%, #ffc107 100%) !important;
+  color: #333 !important;
+  border: 3px solid #ffb300 !important;
+  border-radius: 8px !important;
+  padding: 14px 28px !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 4px 0 #e69500, 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer !important;
+  transition: all 0.1s ease !important;
+}
+
+.run-button:hover,
+button[class*="run"]:hover {
+  background: linear-gradient(180deg, #ffe082 0%, #ffd54f 100%) !important;
+  transform: translateY(2px) !important;
+  box-shadow: 0 2px 0 #e69500, 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.run-button:active {
+  transform: translateY(4px) !important;
+  box-shadow: 0 0 0 #e69500, 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Secondary Buttons */
+.secondary-button,
+button[class*="export"],
+button[class*="Export"],
+button[class*="reset"],
+button[class*="Reset"] {
+  background: linear-gradient(180deg, #7cb342 0%, #689f38 100%) !important;
+  color: white !important;
+  border: 2px solid #558b2f !important;
+  border-radius: 6px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 3px 0 #4e7a2f, 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.secondary-button:hover {
+  background: linear-gradient(180deg, #8bc34a 0%, #7cb342 100%) !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 0 #4e7a2f, 0 3px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Challenge Button */
+button[class*="challenge"],
+button[class*="Challenge"] {
+  background: linear-gradient(180deg, #9c27b0 0%, #7b1fa2 100%) !important;
+  color: white !important;
+  border: 2px solid #6a1b9a !important;
+  border-radius: 6px !important;
+  box-shadow: 0 3px 0 #4a148c, 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ============================================
+   3. BLOCK DESIGN (JIGSAW/PUZZLE PIECES)
+   ============================================ */
+
+/* Base Block Style */
+.agent-block,
+.block,
+[class*="block"][class*="category"],
+div[draggable="true"] {
+  position: relative !important;
+  padding: 12px 20px !important;
+  margin: 8px 0 !important;
+  border-radius: 4px !important;
+  border: none !important;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  cursor: grab !important;
+  font-weight: bold !important;
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.1s ease !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.agent-block:hover,
+.block:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3), 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.agent-block:active,
+.block:active {
+  cursor: grabbing !important;
+  transform: scale(1.05) !important;
+}
+
+/* Top Notch (Cutout) - Using pseudo-element */
+.agent-block::before,
+.block::before,
+[class*="block"][class*="category"]::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 20px !important;
+  height: 6px !important;
+  background: #e8e8e8 !important; /* Match workspace background */
+  border-radius: 0 0 4px 4px !important;
+  z-index: 1 !important;
+}
+
+/* Bottom Bump (Outdent) - Using pseudo-element */
+.agent-block::after,
+.block::after,
+[class*="block"][class*="category"]::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 20px !important;
+  height: 6px !important;
+  background: inherit !important;
+  border-radius: 4px 4px 0 0 !important;
+  z-index: 1 !important;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ============================================
+   4. BLOCK COLORS (Solid, Vibrant)
+   ============================================ */
+
+/* SENSE Block - Bright Blue */
+.block-sense,
+[class*="SENSE"],
+div:contains("SENSE") {
+  background: linear-gradient(180deg, #42a5f5 0%, #1e88e5 100%) !important;
+  border-bottom: 3px solid #1565c0 !important;
+}
+
+.block-sense::after {
+  background: linear-gradient(180deg, #42a5f5 0%, #1e88e5 100%) !important;
+}
+
+/* PLAN Block - Bright Green */
+.block-plan,
+[class*="PLAN"],
+div:contains("PLAN") {
+  background: linear-gradient(180deg, #66bb6a 0%, #43a047 100%) !important;
+  border-bottom: 3px solid #2e7d32 !important;
+}
+
+.block-plan::after {
+  background: linear-gradient(180deg, #66bb6a 0%, #43a047 100%) !important;
+}
+
+/* ACT Block - Bright Orange */
+.block-act,
+[class*="ACT"],
+div:contains("ACT") {
+  background: linear-gradient(180deg, #ffa726 0%, #fb8c00 100%) !important;
+  border-bottom: 3px solid #e65100 !important;
+}
+
+.block-act::after {
+  background: linear-gradient(180deg, #ffa726 0%, #fb8c00 100%) !important;
+}
+
+/* REFLECT Block - Purple */
+.block-reflect,
+[class*="REFLECT"],
+div:contains("REFLECT") {
+  background: linear-gradient(180deg, #ab47bc 0%, #8e24aa 100%) !important;
+  border-bottom: 3px solid #6a1b9a !important;
+}
+
+.block-reflect::after {
+  background: linear-gradient(180deg, #ab47bc 0%, #8e24aa 100%) !important;
+}
+
+/* Start/When Run Block - Bright Yellow */
+.start-block,
+.block-start,
+[class*="when"],
+[class*="start"] {
+  background: linear-gradient(180deg, #ffeb3b 0%, #fdd835 100%) !important;
+  color: #333 !important;
+  border-bottom: 3px solid #f9a825 !important;
+  text-shadow: none !important;
+}
+
+.start-block::after {
+  background: linear-gradient(180deg, #ffeb3b 0%, #fdd835 100%) !important;
+}
+
+/* ============================================
+   5. SIDEBAR BLOCKS (In Palette)
+   ============================================ */
+
+/* Blocks in the left sidebar should be slightly smaller */
+.block-palette .agent-block,
+.block-palette .block,
+aside .agent-block,
+aside .block {
+  padding: 10px 16px !important;
+  min-height: 42px !important;
+  font-size: 14px !important;
+  margin: 6px 8px !important;
+}
+
+/* ============================================
+   6. ADDITIONAL UI ELEMENTS
+   ============================================ */
+
+/* Sandbox/Viewport */
+[class*="sandbox"],
+[class*="viewport"],
+[class*="simulation"] {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+  border: 4px solid #64b5f6 !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Debug Trail / Console */
+[class*="debug"],
+[class*="trail"],
+[class*="console"],
+[class*="log"] {
+  background: #1e1e1e !important;
+  border: 2px solid #333 !important;
+  border-radius: 4px !important;
+  font-family: 'Courier New', monospace !important;
+  padding: 12px !important;
+}
+
+/* Success Messages */
+[class*="success"],
+.bg-green-50,
+.bg-emerald-50 {
+  background: #4caf50 !important;
+  color: white !important;
+  border-left: 4px solid #2e7d32 !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+}
+
+/* Error Messages */
+[class*="error"],
+[class*="failure"],
+.bg-red-50 {
+  background: #f44336 !important;
+  color: white !important;
+  border-left: 4px solid #c62828 !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+}
+
+/* Info/Warning Messages */
+[class*="info"],
+.bg-blue-50 {
+  background: #2196f3 !important;
+  color: white !important;
+  border-left: 4px solid #1565c0 !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+}
+
+[class*="warning"],
+.bg-orange-50,
+.bg-yellow-50 {
+  background: #ff9800 !important;
+  color: white !important;
+  border-left: 4px solid #e65100 !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+}
+
+/* ============================================
+   7. TYPOGRAPHY
+   ============================================ */
+
+/* Make text more bold and readable like Minecraft */
+.agent-block,
+.block,
+button,
+.instructions-panel {
+  font-family: 'Arial', 'Helvetica', sans-serif !important;
+  letter-spacing: 0.3px !important;
+}
+
+/* Block text should be centered and bold */
+.agent-block *,
+.block * {
+  text-align: center !important;
+  font-weight: bold !important;
+}
+
+/* ============================================
+   8. ANIMATIONS & INTERACTIONS
+   ============================================ */
+
+/* Dragging state */
+.agent-block.dragging,
+.block.dragging {
+  opacity: 0.7 !important;
+  transform: rotate(5deg) scale(1.1) !important;
+  z-index: 1000 !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Connection indicators */
+.connection-point {
+  background: #fff !important;
+  border: 3px solid #333 !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.connection-point:hover {
+  background: #ffd54f !important;
+  transform: scale(1.3) !important;
+}
+
+/* ============================================
+   9. RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .agent-block,
+  .block {
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+  }
+
+  .run-button {
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================
+   10. UTILITY OVERRIDES
+   ============================================ */
+
+/* Remove any conflicting Tailwind classes */
+.bg-white {
+  background: transparent !important;
+}
+
+.bg-gray-50,
+.bg-gray-100 {
+  background: #e8e8e8 !important;
+}
+
+.rounded-lg,
+.rounded-xl {
+  border-radius: 8px !important;
+}
+
+/* Override shadow utilities */
+.shadow-lg,
+.shadow-xl {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}

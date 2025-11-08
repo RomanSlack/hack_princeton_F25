@@ -131,16 +131,16 @@ export default function NeetCodeRoadmap({ components, lessons, progress, onCompo
             type: 'bezier',
             animated: isCompleted && canProceed,
             style: {
-              stroke: isCompleted ? '#10b981' : canProceed ? '#ffffff' : '#6b7280',
-              strokeWidth: isCompleted ? 3 : 2.5,
-              strokeDasharray: isCompleted ? '0' : '8,4',
-              opacity: canProceed ? (isCompleted ? 1 : 0.7) : 0.25,
+              stroke: isCompleted ? '#10b981' : canProceed ? '#ffffff' : '#9ca3af',
+              strokeWidth: isCompleted ? 5 : 4,
+              strokeDasharray: isCompleted ? '0' : '0',
+              opacity: canProceed ? 1 : 0.4,
             },
             markerEnd: {
               type: 'arrowclosed',
-              color: isCompleted ? '#10b981' : canProceed ? '#ffffff' : '#6b7280',
-              width: isCompleted ? 20 : 15,
-              height: isCompleted ? 20 : 15,
+              color: isCompleted ? '#10b981' : canProceed ? '#ffffff' : '#9ca3af',
+              width: isCompleted ? 24 : 20,
+              height: isCompleted ? 24 : 20,
             },
           });
         }
