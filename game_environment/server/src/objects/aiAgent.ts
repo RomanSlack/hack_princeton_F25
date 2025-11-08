@@ -132,8 +132,8 @@ export class AIAgent extends GameObject {
 
         const now = Date.now();
         if (!activeWeapon.canShoot(now)) {
-            // Auto-reload if empty
-            if (activeWeapon.ammo <= 0 && !activeWeapon.reloading) {
+            // Auto-reload if empty (but not for melee weapons)
+            if (!activeWeapon.definition.isMelee && activeWeapon.ammo <= 0 && !activeWeapon.reloading) {
                 activeWeapon.startReload(now);
             }
             return;
@@ -208,7 +208,7 @@ export class AIAgent extends GameObject {
             if (obstacle.dead || obstacle.definition.indestructible) continue;
 
             const distance = Vec.distance(this.position, obstacle.position);
-            if (distance <= meleeRange + 2) {
+            if (distance <= meleeRange + 3) {
                 const toObstacle = Vec.normalize(Vec.sub(obstacle.position, this.position));
                 const dotProduct = Vec.dot(direction, toObstacle);
 

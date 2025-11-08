@@ -13,6 +13,11 @@ export class Gun {
     }
 
     canShoot(now: number): boolean {
+        // Melee weapons don't use ammo or reload
+        if (this.definition.isMelee) {
+            return (now - this.lastShotTime) >= this.definition.fireDelay;
+        }
+
         return !this.reloading &&
                this.ammo > 0 &&
                (now - this.lastShotTime) >= this.definition.fireDelay;
@@ -20,11 +25,19 @@ export class Gun {
 
     shoot(now: number): void {
         if (!this.canShoot(now)) return;
-        this.ammo--;
+
+        // Melee weapons don't consume ammo
+        if (!this.definition.isMelee) {
+            this.ammo--;
+        }
+
         this.lastShotTime = now;
     }
 
     startReload(now: number): void {
+        // Melee weapons can't reload
+        if (this.definition.isMelee) return;
+
         if (this.reloading || this.ammo === this.definition.capacity) return;
         this.reloading = true;
         this.reloadStartTime = now;

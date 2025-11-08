@@ -127,8 +127,8 @@ export class Player extends GameObject {
 
         const now = Date.now();
         if (!activeWeapon.canShoot(now)) {
-            // Auto-reload if empty
-            if (activeWeapon.ammo <= 0 && !activeWeapon.reloading) {
+            // Auto-reload if empty (but not for melee weapons)
+            if (!activeWeapon.definition.isMelee && activeWeapon.ammo <= 0 && !activeWeapon.reloading) {
                 console.log(`[Player ${this.username}] Auto-reloading`);
                 activeWeapon.startReload(now);
             }
@@ -171,6 +171,10 @@ export class Player extends GameObject {
         const meleeRange = weaponDef.range;
         const meleeDamage = weaponDef.damage * this.getStatMultiplier();
 
+        console.log(`[Player ${this.username}] Performing melee attack! Damage: ${meleeDamage}, Range: ${meleeRange}, Rotation: ${this.rotation}`);
+
+        let hitCount = 0;
+
         // Check for hits on players/agents
         for (const target of game.players.values()) {
             if (target === this || target.dead) continue;
@@ -181,9 +185,12 @@ export class Player extends GameObject {
                 const toTarget = Vec.normalize(Vec.sub(target.position, this.position));
                 const dotProduct = Vec.dot(direction, toTarget);
 
+                console.log(`[Melee] Target ${target.username}: distance=${distance.toFixed(2)}, dot=${dotProduct.toFixed(2)}`);
+
                 if (dotProduct > 0.5) { // ~60 degree cone in front
                     target.damage(meleeDamage, this);
-                    console.log(`[Player ${this.username}] Melee hit ${target.username} for ${meleeDamage} damage`);
+                    console.log(`[Player ${this.username}] ✓ Melee hit ${target.username} for ${meleeDamage} damage`);
+                    hitCount++;
                 }
             }
         }
@@ -197,9 +204,12 @@ export class Player extends GameObject {
                 const toTarget = Vec.normalize(Vec.sub(target.position, this.position));
                 const dotProduct = Vec.dot(direction, toTarget);
 
+                console.log(`[Melee] AI ${target.username}: distance=${distance.toFixed(2)}, dot=${dotProduct.toFixed(2)}`);
+
                 if (dotProduct > 0.5) {
                     target.damage(meleeDamage, this);
-                    console.log(`[Player ${this.username}] Melee hit ${target.username} for ${meleeDamage} damage`);
+                    console.log(`[Player ${this.username}] ✓ Melee hit AI ${target.username} for ${meleeDamage} damage`);
+                    hitCount++;
                 }
             }
         }
@@ -209,14 +219,15 @@ export class Player extends GameObject {
             if (obstacle.dead || obstacle.definition.indestructible) continue;
 
             const distance = Vec.distance(this.position, obstacle.position);
-            if (distance <= meleeRange + 2) { // Slightly longer range for obstacles
+            if (distance <= meleeRange + 3) { // Slightly longer range for obstacles
                 const toObstacle = Vec.normalize(Vec.sub(obstacle.position, this.position));
                 const dotProduct = Vec.dot(direction, toObstacle);
 
                 if (dotProduct > 0.3) { // Wider cone for obstacles
                     const wasAlive = !obstacle.destroyed;
                     obstacle.damage(meleeDamage);
-                    console.log(`[Player ${this.username}] Melee hit ${obstacle.definition.idString} for ${meleeDamage} damage`);
+                    console.log(`[Player ${this.username}] ✓ Melee hit ${obstacle.definition.idString} for ${meleeDamage} damage (${obstacle.health}/${obstacle.maxHealth} remaining)`);
+                    hitCount++;
 
                     // Spawn XP orbs if obstacle was destroyed
                     if (wasAlive && obstacle.destroyed) {
@@ -226,11 +237,14 @@ export class Player extends GameObject {
                         if (xpAmount > 0) {
                             const orbCount = Math.ceil(xpAmount / 10);
                             game.spawnXPOrbs(obstacle.position, orbCount, 10);
+                            console.log(`[Player ${this.username}] Spawned ${orbCount} XP orbs (${xpAmount} total XP)`);
                         }
                     }
                 }
             }
         }
+
+        console.log(`[Player ${this.username}] Melee attack complete. Hit ${hitCount} targets.`);
     }
 
     update(game: Game): void {

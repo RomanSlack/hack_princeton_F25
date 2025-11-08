@@ -105,5 +105,11 @@ export const Vec = Object.assign(create, {
      */
     distanceSquared(a: Vector, b: Vector): number {
         return Vec.squaredLen(Vec.sub(a, b));
+    },
+    /**
+     * Dot product of two vectors
+     */
+    dot(a: Vector, b: Vector): number {
+        return a.x * b.x + a.y * b.y;
     }
 });
