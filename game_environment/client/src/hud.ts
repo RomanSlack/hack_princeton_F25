@@ -280,7 +280,7 @@ export class HUD {
         return container;
     }
 
-    updateLeaderboard(players: Array<{ id: number; username: string; xp: number; level: number; dead: boolean }>): void {
+    updateLeaderboard(players: Array<{ id: number; username: string; xp: number; level: number; dead: boolean; kills?: number }>): void {
         const entriesContainer = document.getElementById('leaderboard-entries');
         if (!entriesContainer) return;
 
@@ -323,7 +323,7 @@ export class HUD {
             `;
             rank.textContent = index < 3 ? medals[index] : `#${index + 1}`;
 
-            // Player name
+            // Player name with kills
             const name = document.createElement('span');
             name.style.cssText = `
                 flex: 1;
@@ -334,7 +334,8 @@ export class HUD {
                 text-overflow: ellipsis;
                 white-space: nowrap;
             `;
-            name.textContent = player.username + (player.dead ? ' ☠️' : '');
+            const killsText = (player.kills !== undefined && player.kills > 0) ? ` (${player.kills}💀)` : '';
+            name.textContent = player.username + killsText + (player.dead ? ' ☠️' : '');
 
             // XP display
             const xp = document.createElement('span');

@@ -50,6 +50,7 @@ export interface PlayerData {
     color: number;
     xp?: number; // XP for display
     level?: number; // Calculated level
+    kills?: number; // Kill count (persists through death)
     attacking?: boolean; // Is player attacking (for animations)
 }
 

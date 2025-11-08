@@ -17,6 +17,7 @@ export class AIAgent extends GameObject {
     speed: number;
     color: number;
     xp: number = 0; // XP tracking
+    kills: number = 0; // Kill counter (persists through death)
 
     weapons: [Gun | null, Gun | null] = [null, null];
     activeWeaponIndex: 0 | 1 = 0;
@@ -165,14 +166,21 @@ export class AIAgent extends GameObject {
         const bulletCount = activeWeapon.definition.bulletCount;
         const spread = activeWeapon.definition.spread ?? 0;
 
+        // Add random spray to all guns (inaccuracy simulation)
+        const baseInaccuracy = 0.05; // ~3 degrees of random spray
+
         for (let i = 0; i < bulletCount; i++) {
             let angle = this.rotation;
 
             if (bulletCount > 1) {
-                // Spread bullets
+                // Spread bullets (for shotguns)
                 const spreadAngle = (i - (bulletCount - 1) / 2) * (spread / bulletCount);
                 angle += spreadAngle;
             }
+
+            // Add random inaccuracy to each bullet
+            const randomSpray = (Math.random() - 0.5) * baseInaccuracy;
+            angle += randomSpray;
 
             const direction = Vec.fromPolar(angle);
             const bulletStart = Vec.add(this.position, Vec.scale(direction, GameConstants.PLAYER_RADIUS + 1));
@@ -307,9 +315,14 @@ export class AIAgent extends GameObject {
 
         if (this.health <= 0) {
             this.health = 0;
-            // On death, attacker gets kill bonus XP (25 XP - reduced for balance)
+            // On death, attacker gets kill bonus XP (25 XP - reduced for balance) and kill credit
             if (source && 'xp' in source && source !== this) {
                 source.xp += 25;
+                // Increment kill counter (persists through death)
+                if ('kills' in source) {
+                    source.kills += 1;
+                    console.log(`[AIAgent] ${source.username} got a kill! Total kills: ${source.kills}`);
+                }
             }
             this.die();
         }
@@ -331,6 +344,7 @@ export class AIAgent extends GameObject {
         this.health = GameConstants.PLAYER_MAX_HEALTH * healthMultiplier;
         this.maxHealth = GameConstants.PLAYER_MAX_HEALTH * healthMultiplier;
         this.xp = 0; // Reset XP to 0
+        // NOTE: kills counter is NOT reset - it persists through death
 
         // Reset weapons and ammo - very limited starting ammo (66% less)
         this.weapons = [null, null];
@@ -374,6 +388,7 @@ export class AIAgent extends GameObject {
         const newHitbox = new CircleHitbox(GameConstants.PLAYER_RADIUS, targetPosition);
         const nearbyObjects = game.grid.intersectsHitbox(newHitbox);
 
+        let collision = false;
         for (const obj of nearbyObjects) {
             if (obj === this) continue;
             // Skip collision if it's a passable obstacle (open gate or destroyed)
@@ -381,8 +396,48 @@ export class AIAgent extends GameObject {
                 continue;
             }
             if (newHitbox.collidesWith(obj.hitbox)) {
-                return false; // Collision detected, movement failed
+                collision = true;
+                break;
             }
+        }
+
+        if (collision) {
+            // Collision detected - push back in opposite direction
+            const pushBackDistance = 5; // Units to push back
+            const pushBackOffset = Vec.scale(Vec.normalize(offset), -pushBackDistance);
+            const pushBackPosition = Vec.add(this.position, pushBackOffset);
+
+            // Check if pushback position is safe
+            const pushBackHitbox = new CircleHitbox(GameConstants.PLAYER_RADIUS, pushBackPosition);
+            const pushBackObjects = game.grid.intersectsHitbox(pushBackHitbox);
+
+            let pushBackCollision = false;
+            for (const obj of pushBackObjects) {
+                if (obj === this) continue;
+                if ('isPassable' in obj && typeof obj.isPassable === 'function' && obj.isPassable()) {
+                    continue;
+                }
+                if (pushBackHitbox.collidesWith(obj.hitbox)) {
+                    pushBackCollision = true;
+                    break;
+                }
+            }
+
+            // Only push back if the new position is safe
+            if (!pushBackCollision) {
+                const distance = pushBackDistance;
+                const moveSpeed = 0.1; // Faster pushback
+                const duration = Math.max(distance / moveSpeed, 100);
+
+                this.moveTarget = pushBackPosition;
+                this.moveStartPos = Vec.clone(this.position);
+                this.moveStartTime = Date.now();
+                this.moveDuration = duration;
+
+                console.log(`[AIAgent ${this.username}] Pushed back ${pushBackDistance} units due to collision`);
+            }
+
+            return false; // Movement to target failed
         }
 
         // Start smooth movement to target
@@ -445,6 +500,7 @@ export class AIAgent extends GameObject {
             color: this.color,
             xp: this.xp,
             level: this.getLevel(),
+            kills: this.kills,
             attacking: this.attacking
         };
     }
