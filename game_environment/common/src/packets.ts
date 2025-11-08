@@ -58,6 +58,7 @@ export interface BulletData {
     x: number;
     y: number;
     rotation: number;
+    color?: number; // Shooter's color for bullet trail tint
 }
 
 export interface ObstacleData {

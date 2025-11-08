@@ -20,6 +20,7 @@ export class Bullet {
     damage: number;
     maxRange: number;
     shooter: GameObject;
+    shooterColor: number;
 
     traveledDistance = 0;
     dead = false;
@@ -37,6 +38,9 @@ export class Bullet {
 
         this.maxRange = gun.range;
         this.shooter = shooter;
+
+        // Store shooter's color for bullet trail
+        this.shooterColor = ('color' in shooter) ? (shooter as any).color : 0xFFFFFF;
     }
 
     update(dt: number, game: Game): void {
@@ -115,7 +119,8 @@ export class Bullet {
             id: this.id,
             x: this.position.x,
             y: this.position.y,
-            rotation: this.rotation
+            rotation: this.rotation,
+            color: this.shooterColor
         };
     }
 }

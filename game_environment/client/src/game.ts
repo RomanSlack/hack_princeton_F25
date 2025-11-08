@@ -286,13 +286,15 @@ export class GameClient {
                 sprite.anchor.set(1, 0.5); // Anchor at RIGHT-center (trail extends behind bullet)
                 sprite.rotation = bulletData.rotation;
                 sprite.zIndex = 25; // Above players
-                sprite.tint = 0xffdd44; // Yellow-orange color
+
+                // Use shooter's color for bullet trail, fallback to yellow-orange
+                sprite.tint = bulletData.color ?? 0xffdd44;
 
                 this.app.stage.addChild(sprite);
                 this.bulletSprites.set(bulletData.id, sprite);
                 this.bulletSpawnTimes.set(bulletData.id, Date.now());
 
-                // Create white circle at bullet tip
+                // Create white circle at bullet tip (keep white for visibility)
                 const circle = new PIXI.Graphics();
                 circle.circle(0, 0, 1); // Small circle, 1 unit radius
                 circle.fill({ color: 0xffffff, alpha: 0.9 });
