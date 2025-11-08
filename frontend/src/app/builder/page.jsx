@@ -1034,48 +1034,161 @@ export default function AgentGameBuilder() {
           >
             {/* SVG for connections */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-              {/* Existing connections */}
+              {/* Black arrows - render first (bottom layer) */}
               {connections.map(conn => {
                 const from = getBlockConnectionPoint(conn.from, conn.to);
                 const to = getBlockConnectionPoint(conn.to, conn.from);
-                // Extend the endpoint to the arrowhead tip
                 const toExtended = extendToArrowheadTip(to, to.edge);
                 const midX = (from.x + toExtended.x) / 2;
                 const midY = (from.y + toExtended.y) / 2;
                 const arrowOrientation = getArrowheadOrientation(to.edge);
                 const markerId = `arrowhead-${arrowOrientation}`;
 
-                // Determine curve shape based on connection edge
-                // For top/bottom connections, flip curve to be vertical-first
                 const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
                 let pathD;
-                
+
                 if (isVerticalConnection) {
-                  // Vertical-first curve: curve vertically first, then horizontally
                   pathD = `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
                 } else {
-                  // Horizontal-first curve: curve horizontally first, then vertically
                   pathD = `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
                 }
 
                 return (
-                  <g key={conn.id}>
+                  <path
+                    key={conn.id}
+                    d={pathD}
+                    stroke="#475569"
+                    strokeWidth="3"
+                    fill="none"
+                    markerEnd={`url(#${markerId})`}
+                  />
+                );
+              })}
+
+              {/* Animated transitions - render second (middle layer, over black arrows) */}
+              {animatingTransitions.map(transition => {
+                console.log('🎨 Rendering animation:', transition.id, 'from', transition.fromBlockId, 'to', transition.toBlockId);
+
+                // Find the connection between from and to blocks
+                const connection = connections.find(
+                  conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
+                );
+
+                if (!connection) {
+                  console.warn(`⚠️ No connection found for transition: ${transition.fromBlockId} → ${transition.toBlockId}`);
+                  return null; // Skip if no connection exists
+                }
+
+                // Use edge-based connection points (same as arrows)
+                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
+                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+                const toExtended = extendToArrowheadTip(to, to.edge);
+
+                const midX = (from.x + toExtended.x) / 2;
+                const midY = (from.y + toExtended.y) / 2;
+
+                // Determine curve shape based on connection edge (same logic as connections)
+                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
+                const arrowOrientation = getArrowheadOrientation(to.edge);
+                const blueMarkerId = `arrowhead-blue-${arrowOrientation}`;
+
+                // Calculate animation duration - longer with 3 phases: fill, hold, fade
+                const duration = '1.5s'; // 1500ms total
+
+                // Create keyframes for flowing highlight effect
+                const flowKeyframe = `flow-${transition.id}`;
+                const fadeKeyframe = `fade-${transition.id}`;
+
+                // Get the arrow path without extensions (just the visible connection)
+                const arrowPathD = isVerticalConnection
+                  ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
+                  : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+
+                // Estimate path length for animation (rough calculation)
+                const dx = toExtended.x - from.x;
+                const dy = toExtended.y - from.y;
+                const estimatedLength = Math.sqrt(dx * dx + dy * dy) * 1.5; // 1.5x for curve
+
+                const arrowheadFadeKeyframe = `arrowhead-fade-${transition.id}`;
+
+                return (
+                  <g key={transition.id}>
+                    <style>
+                      {`
+                        @keyframes ${flowKeyframe} {
+                          0% {
+                            stroke-dashoffset: ${estimatedLength};
+                          }
+                          33% {
+                            stroke-dashoffset: 0;
+                          }
+                          66% {
+                            stroke-dashoffset: 0;
+                          }
+                          100% {
+                            stroke-dashoffset: -${estimatedLength};
+                          }
+                        }
+                        @keyframes ${fadeKeyframe} {
+                          0% {
+                            opacity: 0;
+                          }
+                          5% {
+                            opacity: 1;
+                          }
+                          66% {
+                            opacity: 1;
+                          }
+                          100% {
+                            opacity: 1;
+                          }
+                        }
+                        @keyframes ${arrowheadFadeKeyframe} {
+                          0% {
+                            opacity: 0;
+                          }
+                          19% {
+                            opacity: 0;
+                          }
+                          29% {
+                            opacity: 1;
+                          }
+                          71% {
+                            opacity: 1;
+                          }
+                          81% {
+                            opacity: 0;
+                          }
+                          100% {
+                            opacity: 0;
+                          }
+                        }
+                      `}
+                    </style>
+
+                    {/* Flowing highlighted arrow path */}
                     <path
-                      d={pathD}
-                      stroke="#475569"
+                      d={arrowPathD}
+                      stroke="#3b82f6"
                       strokeWidth="3"
                       fill="none"
-                      markerEnd={`url(#${markerId})`}
+                      strokeDasharray={`${estimatedLength} ${estimatedLength}`}
+                      style={{
+                        animation: `${flowKeyframe} ${duration} ease-out ${transition.delay}ms forwards, ${fadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
+                        strokeDashoffset: estimatedLength,
+                        opacity: 0
+                      }}
                     />
-                    <circle
-                      cx={midX}
-                      cy={midY}
-                      r="10"
-                      fill="#ef4444"
-                      className="cursor-pointer pointer-events-auto hover:r-12 transition"
-                      onClick={() => handleConnectionClick(conn.id)}
-                      onContextMenu={(e) => handleConnectionRightClick(e, conn.id, midX, midY)}
-                      title="Right-click to delete connection"
+
+                    {/* Blue arrowhead that fades in/out at appropriate times */}
+                    <polygon
+                      points="0 0, 12 6, 0 12"
+                      fill="#3b82f6"
+                      transform={`translate(${toExtended.x}, ${toExtended.y}) rotate(${arrowOrientation}) translate(-10, -6)`}
+                      style={{
+                        animation: `${arrowheadFadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
+                        opacity: 0
+                      }}
                     />
                   </g>
                 );
@@ -1094,249 +1207,26 @@ export default function AgentGameBuilder() {
                 />
               )}
 
-              {/* Animated transition particles */}
-              {animatingTransitions.map(transition => {
-                // Find the connection between from and to blocks
-                const connection = connections.find(
-                  conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
-                );
-
-                if (!connection) {
-                  console.warn(`⚠️ No connection found for transition: ${transition.fromBlockId} → ${transition.toBlockId}`);
-                  return null; // Skip if no connection exists
-                }
-
-                // Use edge-based connection points (same as arrows)
-                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
-                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+              {/* Red delete circles - render last so they're on top */}
+              {connections.map(conn => {
+                const from = getBlockConnectionPoint(conn.from, conn.to);
+                const to = getBlockConnectionPoint(conn.to, conn.from);
                 const toExtended = extendToArrowheadTip(to, to.edge);
-
-                // Extend the path into the blocks based on edge direction
-                const extendDistance = 40; // Pixels to extend into the block
-                let fromExtended = { ...from };
-                let toExtendedIntoBlock = { ...toExtended };
-
-                // Extend start point INTO source block (opposite direction of edge)
-                switch (from.edge) {
-                  case 'right': fromExtended.x -= extendDistance; break;  // Go left into block
-                  case 'left': fromExtended.x += extendDistance; break;   // Go right into block
-                  case 'bottom': fromExtended.y -= extendDistance; break; // Go up into block
-                  case 'top': fromExtended.y += extendDistance; break;    // Go down into block
-                }
-
-                // Extend end point INTO destination block (into block interior)
-                switch (to.edge) {
-                  case 'right': toExtendedIntoBlock.x -= extendDistance; break;  // Go left into block
-                  case 'left': toExtendedIntoBlock.x += extendDistance; break;   // Go right into block
-                  case 'bottom': toExtendedIntoBlock.y -= extendDistance; break; // Go up into block
-                  case 'top': toExtendedIntoBlock.y += extendDistance; break;    // Go down into block
-                }
-
                 const midX = (from.x + toExtended.x) / 2;
                 const midY = (from.y + toExtended.y) / 2;
 
-                // Determine curve shape based on connection edge (same logic as connections)
-                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
-                let pathD;
-
-                if (isVerticalConnection) {
-                  // Vertical-first curve with extensions
-                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
-                } else {
-                  // Horizontal-first curve with extensions
-                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
-                }
-
-                // Calculate animation duration - longer with 3 phases: fill, hold, fade
-                const duration = '1.5s'; // 1500ms total
-
-                // Create keyframes for flowing highlight effect
-                const flowKeyframe = `flow-${transition.id}`;
-                const fadeKeyframe = `fade-${transition.id}`;
-
-                // Get the arrow path without extensions (just the visible connection)
-                const arrowPathD = isVerticalConnection
-                  ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
-                  : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
-
-                // Estimate path length for animation (rough calculation)
-                const dx = toExtended.x - from.x;
-                const dy = toExtended.y - from.y;
-                const estimatedLength = Math.sqrt(dx * dx + dy * dy) * 1.5; // 1.5x for curve
-
                 return (
-                  <g key={transition.id}>
-                    <style>
-                      {`
-                        @keyframes ${flowKeyframe} {
-                          0% {
-                            stroke-dashoffset: ${estimatedLength};
-                          }
-                          33% {
-                            stroke-dashoffset: 0;
-                          }
-                          66% {
-                            stroke-dashoffset: 0;
-                          }
-                          100% {
-                            stroke-dashoffset: -${estimatedLength};
-                          }
-                        }
-                        @keyframes ${fadeKeyframe} {
-                          0% {
-                            opacity: 0;
-                          }
-                          5% {
-                            opacity: 1;
-                          }
-                          66% {
-                            opacity: 1;
-                          }
-                          100% {
-                            opacity: 1;
-                          }
-                        }
-                      `}
-                    </style>
-
-                    {/* Flowing highlighted arrow path */}
-                    <path
-                      d={arrowPathD}
-                      stroke="#3b82f6"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray={`${estimatedLength} ${estimatedLength}`}
-                      style={{
-                        filter: 'drop-shadow(0 0 8px #3b82f6)',
-                        animation: `${flowKeyframe} ${duration} ease-out ${transition.delay}ms forwards, ${fadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
-                        strokeDashoffset: estimatedLength,
-                        opacity: 0
-                      }}
-                    />
-                  </g>
-                );
-              })}
-
-              {/* Animated transition particles */}
-              {animatingTransitions.map(transition => {
-                // Find the connection between from and to blocks
-                const connection = connections.find(
-                  conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
-                );
-
-                if (!connection) {
-                  console.warn(`⚠️ No connection found for transition: ${transition.fromBlockId} → ${transition.toBlockId}`);
-                  return null; // Skip if no connection exists
-                }
-
-                // Use edge-based connection points (same as arrows)
-                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
-                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
-                const toExtended = extendToArrowheadTip(to, to.edge);
-
-                // Extend the path into the blocks based on edge direction
-                const extendDistance = 40; // Pixels to extend into the block
-                let fromExtended = { ...from };
-                let toExtendedIntoBlock = { ...toExtended };
-
-                // Extend start point INTO source block (opposite direction of edge)
-                switch (from.edge) {
-                  case 'right': fromExtended.x -= extendDistance; break;  // Go left into block
-                  case 'left': fromExtended.x += extendDistance; break;   // Go right into block
-                  case 'bottom': fromExtended.y -= extendDistance; break; // Go up into block
-                  case 'top': fromExtended.y += extendDistance; break;    // Go down into block
-                }
-
-                // Extend end point INTO destination block (into block interior)
-                switch (to.edge) {
-                  case 'right': toExtendedIntoBlock.x -= extendDistance; break;  // Go left into block
-                  case 'left': toExtendedIntoBlock.x += extendDistance; break;   // Go right into block
-                  case 'bottom': toExtendedIntoBlock.y -= extendDistance; break; // Go up into block
-                  case 'top': toExtendedIntoBlock.y += extendDistance; break;    // Go down into block
-                }
-
-                const midX = (from.x + toExtended.x) / 2;
-                const midY = (from.y + toExtended.y) / 2;
-
-                // Determine curve shape based on connection edge (same logic as connections)
-                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
-                let pathD;
-
-                if (isVerticalConnection) {
-                  // Vertical-first curve with extensions
-                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
-                } else {
-                  // Horizontal-first curve with extensions
-                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
-                }
-
-                // Calculate animation duration - longer with 3 phases: fill, hold, fade
-                const duration = '1.5s'; // 1500ms total
-
-                // Create keyframes for flowing highlight effect
-                const flowKeyframe = `flow-${transition.id}`;
-                const fadeKeyframe = `fade-${transition.id}`;
-
-                // Get the arrow path without extensions (just the visible connection)
-                const arrowPathD = isVerticalConnection
-                  ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
-                  : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
-
-                // Estimate path length for animation (rough calculation)
-                const dx = toExtended.x - from.x;
-                const dy = toExtended.y - from.y;
-                const estimatedLength = Math.sqrt(dx * dx + dy * dy) * 1.5; // 1.5x for curve
-
-                return (
-                  <g key={transition.id}>
-                    <style>
-                      {`
-                        @keyframes ${flowKeyframe} {
-                          0% {
-                            stroke-dashoffset: ${estimatedLength};
-                          }
-                          33% {
-                            stroke-dashoffset: 0;
-                          }
-                          66% {
-                            stroke-dashoffset: 0;
-                          }
-                          100% {
-                            stroke-dashoffset: -${estimatedLength};
-                          }
-                        }
-                        @keyframes ${fadeKeyframe} {
-                          0% {
-                            opacity: 0;
-                          }
-                          5% {
-                            opacity: 1;
-                          }
-                          66% {
-                            opacity: 1;
-                          }
-                          100% {
-                            opacity: 1;
-                          }
-                        }
-                      `}
-                    </style>
-
-                    {/* Flowing highlighted arrow path */}
-                    <path
-                      d={arrowPathD}
-                      stroke="#3b82f6"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray={`${estimatedLength} ${estimatedLength}`}
-                      style={{
-                        filter: 'drop-shadow(0 0 8px #3b82f6)',
-                        animation: `${flowKeyframe} ${duration} ease-out ${transition.delay}ms forwards, ${fadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
-                        strokeDashoffset: estimatedLength,
-                        opacity: 0
-                      }}
-                    />
-                  </g>
+                  <circle
+                    key={`circle-${conn.id}`}
+                    cx={midX}
+                    cy={midY}
+                    r="10"
+                    fill="#ef4444"
+                    className="cursor-pointer pointer-events-auto hover:r-12 transition"
+                    onClick={() => handleConnectionClick(conn.id)}
+                    onContextMenu={(e) => handleConnectionRightClick(e, conn.id, midX, midY)}
+                    title="Right-click to delete connection"
+                  />
                 );
               })}
 
@@ -1364,6 +1254,7 @@ export default function AgentGameBuilder() {
 
               {/* Arrowhead markers for different orientations */}
               <defs>
+                {/* Gray arrowheads for regular connections */}
                 {/* Arrowhead pointing right (0 degrees) - for left edge connections */}
                 <marker
                   id="arrowhead-0"
@@ -1412,6 +1303,52 @@ export default function AgentGameBuilder() {
                 >
                   <polygon points="0 0, 12 6, 0 12" fill="#475569" />
                 </marker>
+
+                {/* Blue arrowheads for animated transitions */}
+                <marker
+                  id="arrowhead-blue-0"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="0"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#3b82f6" />
+                </marker>
+                <marker
+                  id="arrowhead-blue-90"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="90"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#3b82f6" />
+                </marker>
+                <marker
+                  id="arrowhead-blue-180"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="180"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#3b82f6" />
+                </marker>
+                <marker
+                  id="arrowhead-blue-270"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="270"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#3b82f6" />
+                </marker>
               </defs>
             </svg>
 
@@ -1449,17 +1386,6 @@ export default function AgentGameBuilder() {
                     transition: 'border 300ms ease-in-out, box-shadow 300ms ease-in-out',
                   }}
                 >
-                  {isExecuting && (
-                    <div
-                      className="absolute -left-6 top-1/2 -translate-y-1/2 text-lg animate-pulse"
-                      style={{
-                        color: highlightColor,
-                        animation: 'fadeIn 300ms ease-in-out'
-                      }}
-                    >
-                      ▶
-                    </div>
-                  )}
                   <div>{block.label}</div>
                   {block.blockType === 'agent' && (
                     <div className="text-xs opacity-75 mt-1">
