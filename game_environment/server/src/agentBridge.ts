@@ -14,6 +14,7 @@ export interface BackendAction {
         y?: number;
         target_player_id?: string;
         plan?: string;
+        query?: string;
     };
 }
 
@@ -91,6 +92,10 @@ export class AgentBridge {
                 // Plan doesn't directly affect input, just store it
                 state.currentPlan = action.parameters.plan;
                 break;
+            case "search":
+                // Search doesn't directly affect game input, results come from MCP
+                console.log(`[AgentBridge] Agent ${agentId} searched for: ${action.parameters.query}`);
+                break;
             default:
                 console.warn(`[AgentBridge] Unknown action type: ${action.tool_type}`);
         }
@@ -120,11 +125,23 @@ export class AgentBridge {
     }
 
     /**
-     * Apply attack command - aims at target player and shoots
+     * Apply attack command - aims at target player and shoots (limited to 2 shots)
      */
     private applyAttackCommand(input: InputPacket, action: BackendAction, agent: AIAgent, state: CommandState): void {
         const targetId = action.parameters.target_player_id;
         if (!targetId) return;
+
+        const now = Date.now();
+
+        // Check if this is a new attack action (different target or timed out)
+        const isNewAttack = state.attackTarget !== targetId || (now - state.attackStartTime) > 2000;
+
+        if (isNewAttack) {
+            // Reset shot counter for new attack
+            state.attackShotsFired = 0;
+            state.attackStartTime = now;
+            state.attackTarget = targetId;
+        }
 
         // Find target (check both players and AI agents)
         let targetPosition: Vector | null = null;
@@ -148,10 +165,26 @@ export class AgentBridge {
         }
 
         if (targetPosition) {
-            // Aim at target
-            input.mouse = targetPosition;
-            input.attacking = true;
-            state.attackTarget = targetId;
+            // Check if agent's weapon can shoot (respects fire delay)
+            const activeWeapon = agent.weapons[agent.activeWeaponIndex];
+            const canShoot = activeWeapon && activeWeapon.canShoot(now);
+
+            // Only increment counter when actually capable of shooting
+            if (canShoot && state.attackShotsFired < 2) {
+                // Aim at target and shoot
+                input.mouse = targetPosition;
+                input.attacking = true;
+                state.attackShotsFired++; // Only increment when we can actually shoot
+                console.log(`[AgentBridge] Agent ${agent.username} firing shot ${state.attackShotsFired}/2 at ${targetId}`);
+            } else if (state.attackShotsFired >= 2) {
+                // Already fired 2 shots, just aim but don't shoot
+                input.mouse = targetPosition;
+                input.attacking = false;
+            } else {
+                // Weapon on cooldown, just aim
+                input.mouse = targetPosition;
+                input.attacking = false;
+            }
         } else {
             console.warn(`[AgentBridge] Target not found: ${targetId}`);
         }
@@ -268,7 +301,9 @@ export class AgentBridge {
                 lastAction: null,
                 moveTarget: null,
                 attackTarget: null,
-                currentPlan: null
+                currentPlan: null,
+                attackShotsFired: 0,
+                attackStartTime: 0
             };
             this.commandStates.set(agentId, state);
         }
@@ -289,4 +324,6 @@ interface CommandState {
     moveTarget: Vector | null;
     attackTarget: string | null;
     currentPlan: string | null;
+    attackShotsFired: number; // Track shots fired in current attack
+    attackStartTime: number; // When attack started
 }

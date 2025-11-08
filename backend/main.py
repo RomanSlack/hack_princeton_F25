@@ -9,6 +9,7 @@ import logging
 import asyncio
 import os
 from game_client import GameEnvironmentClient
+from openai import OpenAI
 
 load_dotenv()
 
@@ -22,6 +23,14 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 DEFAULT_STEP_DELAY = float(os.getenv("STEP_DELAY", "6.0"))
 LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "5.0"))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Initialize OpenAI client
+openai_client = None
+if OPENAI_API_KEY:
+    openai_client = OpenAI(api_key=OPENAI_API_KEY)
+else:
+    logger.warning("OPENAI_API_KEY not found in environment variables. Chat functionality will be disabled.")
 
 # Configuration for action history
 MAX_ACTION_HISTORY = 5  # Maximum number of past actions to include in context
@@ -32,7 +41,7 @@ MAX_ACTION_HISTORY = 5  # Maximum number of past actions to include in context
 class ToolConnection(BaseModel):
     """Connection from an Agent block to a Tool block"""
     tool_id: str = Field(..., description="ID of the tool block to connect to")
-    tool_name: Literal["move", "attack", "collect", "plan"] = Field(
+    tool_name: Literal["move", "attack", "collect", "plan", "search"] = Field(
         ..., description="Name of the tool (must match the tool block's tool_type)"
     )
 
@@ -71,7 +80,7 @@ class ToolBlock(BaseModel):
     """Tool block - executes a game action"""
     id: str = Field(..., description="Unique identifier for this block")
     type: Literal["tool"] = "tool"
-    tool_type: Literal["move", "attack", "collect", "plan"] = Field(
+    tool_type: Literal["move", "attack", "collect", "plan", "search"] = Field(
         ..., description="Type of tool action"
     )
     parameters: Dict[str, str] = Field(
@@ -151,7 +160,7 @@ class GameState(BaseModel):
     # Example fields (these are placeholders and will be updated later)
     agent_id: Optional[str] = None
     position: Optional[Dict[str, float]] = None
-    health: Optional[int] = None
+    health: Optional[float] = None
     nearby_agents: Optional[List[Dict[str, Any]]] = None
     inventory: Optional[List[str]] = None
 
@@ -167,7 +176,7 @@ class NextStepRequest(BaseModel):
 
 class ToolAction(BaseModel):
     """Response model for a tool action"""
-    tool_type: Literal["move", "attack", "collect", "plan"]
+    tool_type: Literal["move", "attack", "collect", "plan", "search"]
     parameters: Dict[str, Any] = Field(
         default_factory=dict,
         description="Parameters for the tool (e.g., direction for move, target for attack)"
@@ -321,8 +330,10 @@ async def execute_agent_block(
     available_tools = [conn.tool_name for conn in agent_block.tool_connections]
     logger.info(f"Available tools: {', '.join(available_tools)}")
 
-    # Check if plan tool is available
+    # Check if MCP tools are available (plan or search)
     has_plan_tool = "plan" in available_tools
+    has_search_tool = "search" in available_tools
+    has_mcp_tools = has_plan_tool or has_search_tool
 
     # Build attack-specific context if attack tool is available
     attack_context = ""
@@ -363,16 +374,25 @@ async def execute_agent_block(
     full_input = agent_block.system_prompt + "\n\n" + user_input
     logger.info(f"LLM Input:\n{full_input}")
 
-    # Call Dedalus with MCP server access if plan tool is available
+    # Build MCP servers list based on available tools
+    mcp_servers = []
+    if has_plan_tool:
+        mcp_servers.append("raptors65/hack-princeton-mcp")
+    if has_search_tool:
+        mcp_servers.append("tsion/brave-search-mcp")
+
+    # Call Dedalus with MCP server access if MCP tools are available
     logger.info(f"Calling LLM with model: {agent_block.model} (timeout: {LLM_TIMEOUT}s)")
+    if mcp_servers:
+        logger.info(f"MCP tools detected, including MCP servers: {mcp_servers}")
+
     try:
-        if has_plan_tool:
-            logger.info("Plan tool detected, including MCP server access")
+        if mcp_servers:
             response = await asyncio.wait_for(
                 dedalus_runner.run(
                     input=full_input,
                     model=agent_block.model,
-                    mcp_servers=["raptors65/hack-princeton-mcp"],
+                    mcp_servers=mcp_servers,
                 ),
                 timeout=LLM_TIMEOUT
             )
@@ -462,7 +482,12 @@ async def health_check():
 
 
 @app.post("/add-agent")
-async def add_agent(program: ProgramSchema, register_in_game: bool = False, username: Optional[str] = None):
+async def add_agent(
+    program: ProgramSchema,
+    register_in_game: bool = False,
+    username: Optional[str] = None,
+    preferred_zone: Optional[str] = None
+):
     """
     Add a new agent to the backend with its Scratch-like program.
 
@@ -472,6 +497,7 @@ async def add_agent(program: ProgramSchema, register_in_game: bool = False, user
         program: Agent program with blocks
         register_in_game: If True, also register the agent in the game environment
         username: Optional display name for the agent in the game
+        preferred_zone: Optional zone preference ("zone1" or "zone2"). Defaults to zone1 if not specified.
     """
     agent_id = program.agent_id
 
@@ -509,9 +535,10 @@ async def add_agent(program: ProgramSchema, register_in_game: bool = False, user
     game_registration = None
     if register_in_game:
         try:
-            game_registration = await game_client.register_agent(agent_id, username)
+            game_registration = await game_client.register_agent(agent_id, username, preferred_zone)
             game_session.registered_agents[agent_id] = True
-            logger.info(f"Agent {agent_id} registered in game environment")
+            zone_info = f" in {preferred_zone}" if preferred_zone else ""
+            logger.info(f"Agent {agent_id} registered in game environment{zone_info}")
         except Exception as e:
             logger.error(f"Failed to register agent in game: {e}")
             # Don't fail the whole request, just log the error
@@ -973,6 +1000,10 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
         agent_state.current_plan = parameters["plan"]
         logger.info(f"Stored plan for agent {agent_id}: {agent_state.current_plan}")
 
+    # If the tool is "search", log the search query and results will come from MCP
+    if tool_choice == "search" and "query" in parameters:
+        logger.info(f"Agent {agent_id} searching for: {parameters['query']}")
+
     # Store this action in the agent's action history
     action_record = {
         "action": tool_choice,
@@ -1001,6 +1032,70 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
         action=action,
         current_node=agent_state.current_node
     )
+
+
+class ChatMessage(BaseModel):
+    """Request model for chat endpoint"""
+    message: str = Field(..., description="The user's message")
+    lesson_title: Optional[str] = Field(None, description="Title of the current lesson")
+    lesson_guidelines: Optional[List[str]] = Field(None, description="Guidelines for the current lesson")
+
+
+class ChatResponse(BaseModel):
+    """Response model for chat endpoint"""
+    response: str = Field(..., description="The assistant's response")
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatMessage) -> ChatResponse:
+    """
+    Chat endpoint that uses OpenAI to provide helpful responses about the lesson.
+    """
+    if not openai_client:
+        raise HTTPException(
+            status_code=503,
+            detail="Chat functionality is not available. OPENAI_API_KEY not configured."
+        )
+    
+    try:
+        # Build system prompt with lesson context
+        system_prompt = """You are discer, a helpful AI teaching assistant for an agentic AI learning platform. 
+You help students understand agentic AI concepts and guide them through building AI agents using a visual block-based programming interface.
+
+Be friendly, encouraging, and provide clear explanations. If students ask about specific blocks or concepts, explain them in the context of building agentic AI systems.
+Keep responses concise but informative. If you don't know something specific about the platform, say so honestly."""
+
+        user_prompt = request.message
+        
+        # Add lesson context if available
+        if request.lesson_title:
+            user_prompt = f"Lesson: {request.lesson_title}\n\n{user_prompt}"
+        
+        if request.lesson_guidelines:
+            guidelines_text = "\n".join([f"- {g}" for g in request.lesson_guidelines])
+            user_prompt = f"{user_prompt}\n\nLesson Guidelines:\n{guidelines_text}"
+
+        # Call OpenAI API
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+
+        assistant_message = response.choices[0].message.content
+        
+        return ChatResponse(response=assistant_message)
+    
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate chat response: {str(e)}"
+        )
 
 
 def main():

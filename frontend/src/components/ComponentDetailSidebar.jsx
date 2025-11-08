@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import Link from 'next/link';
 
 /**
  * ComponentDetailSidebar
@@ -164,11 +165,19 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
                       
                       {/* Lesson Name */}
                       <td className="py-3 px-3">
-                        <div className="flex items-center gap-2">
+                        <Link 
+                          href={`/lessons/${lesson.id}`}
+                          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        >
                           <div>
-                            <div className={`font-medium text-sm ${theme.text.primary}`}>{lesson.title}</div>
+                            <div className={`font-medium text-sm ${theme.text.primary} hover:underline`}>
+                              {lesson.title}
+                            </div>
+                            <div className={`text-xs ${theme.text.tertiary} mt-0.5`}>
+                              {lesson.focus}
+                            </div>
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       
                       {/* Difficulty */}

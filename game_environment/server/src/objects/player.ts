@@ -88,6 +88,10 @@ export class Player extends GameObject {
             let collision = false;
             for (const obj of nearbyObjects) {
                 if (obj === this) continue;
+                // Skip collision if it's a passable obstacle (open gate or destroyed)
+                if ('isPassable' in obj && typeof obj.isPassable === 'function' && obj.isPassable()) {
+                    continue;
+                }
                 if (newHitbox.collidesWith(obj.hitbox)) {
                     collision = true;
                     break;
@@ -115,6 +119,10 @@ export class Player extends GameObject {
 
         if (input.actions.pickup) {
             game.checkPickups(this);
+        }
+
+        if (input.actions.interact) {
+            game.checkInteractions(this);
         }
     }
 

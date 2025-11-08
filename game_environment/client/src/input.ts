@@ -20,6 +20,7 @@ export class InputManager {
         switchWeapon: false,
         pickup: false,
         reload: false,
+        interact: false,
         shoot: false  // One-time shoot action
     };
 
@@ -53,6 +54,7 @@ export class InputManager {
                     this.actions.switchWeapon = true;
                     break;
                 case 'KeyF': this.actions.pickup = true; break;
+                case 'KeyE': this.actions.interact = true; break;
                 case 'KeyR': this.actions.reload = true; break;
                 case 'Tab':
                     e.preventDefault(); // Prevent tab from changing focus
@@ -122,7 +124,8 @@ export class InputManager {
                 actions: {
                     switchWeapon: false,
                     pickup: false,
-                    reload: false
+                    reload: false,
+                    interact: false
                 }
             };
 
@@ -130,6 +133,7 @@ export class InputManager {
             this.actions.switchWeapon = false;
             this.actions.pickup = false;
             this.actions.reload = false;
+            this.actions.interact = false;
 
             return packet;
         }
@@ -144,7 +148,8 @@ export class InputManager {
             actions: {
                 switchWeapon: this.actions.switchWeapon,
                 pickup: this.actions.pickup,
-                reload: this.actions.reload
+                reload: this.actions.reload,
+                interact: this.actions.interact
             }
         };
 
@@ -152,6 +157,7 @@ export class InputManager {
         this.actions.switchWeapon = false;
         this.actions.pickup = false;
         this.actions.reload = false;
+        this.actions.interact = false;
         this.actions.shoot = false; // Reset shoot action
 
         return packet;

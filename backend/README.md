@@ -16,16 +16,49 @@ uv sync
 uv run python main.py
 ```
 
-The server will start on `http://localhost:8000`.
+The server will start on `http://localhost:8001`.
 
-API documentation is available at `http://localhost:8000/docs`.
+API documentation is available at `http://localhost:8001/docs`.
+
+## Quick Start with Demo Agents
+
+To quickly test the system with pre-configured agents, use the demo script:
+
+```bash
+uv run python demo_agents.py
+```
+
+This script registers 4 different agents with unique strategies:
+
+1. **aggressive_bot** - Prioritizes attacking enemies aggressively
+2. **defensive_bot** - Focuses on survival by avoiding danger
+3. **collector_bot** - Scavenges for items and equipment
+4. **strategic_bot** - Uses strategic planning with the plan tool
+
+Each agent has different:
+- **System prompts**: Defines their personality and goals
+- **User prompts**: Guides their decision-making process
+- **Tool combinations**: Different actions available based on playstyle
+- **LLM models**: Mix of GPT-4o Mini and Claude models
+
+After running the demo script:
+1. Open the game at `http://localhost:3000`
+2. Click **PLAY** to join
+3. The backend will register agents in the game and start auto-stepping
+4. Watch the agents compete with different strategies!
+
+You can modify `demo_agents.py` to:
+- Change agent strategies by editing system/user prompts
+- Add more agents or remove existing ones
+- Experiment with different LLM models
+- Customize tool combinations
 
 ## API Endpoints
 
 ### Health Check
 
 ```bash
-curl http://localhost:8000/
+curl http://localhost:8001/
 ```
 
 **Response:**
@@ -48,7 +81,7 @@ Add a new agent with its Scratch-like program to the game.
 **Example: Simple Loop**
 
 ```bash
-curl -X POST http://localhost:8000/add-agent \
+curl -X POST http://localhost:8001/add-agent \
   -H "Content-Type: application/json" \
   -d '{
   "agent_id": "player_123",
@@ -101,7 +134,7 @@ curl -X POST http://localhost:8000/add-agent \
 **Example: Complex Program with Multiple Entry Points**
 
 ```bash
-curl -X POST http://localhost:8000/add-agent \
+curl -X POST http://localhost:8001/add-agent \
   -H "Content-Type: application/json" \
   -d '{
   "agent_id": "player_456",
@@ -247,7 +280,7 @@ Execute the next step for an agent based on the current game state. This endpoin
 **Example: Normal Execution**
 
 ```bash
-curl -X POST http://localhost:8000/next-step-for-agents \
+curl -X POST http://localhost:8001/next-step-for-agents \
   -H "Content-Type: application/json" \
   -d '{
     "agent_id": "player_123",
@@ -282,7 +315,7 @@ curl -X POST http://localhost:8000/next-step-for-agents \
 When an action occurs (like being attacked), you can trigger the corresponding entry point:
 
 ```bash
-curl -X POST http://localhost:8000/next-step-for-agents \
+curl -X POST http://localhost:8001/next-step-for-agents \
   -H "Content-Type: application/json" \
   -d '{
     "agent_id": "player_456",

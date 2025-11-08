@@ -67,5 +67,17 @@ export const Obstacles: Record<string, ObstacleDefinition> = {
             height: 512   // Spans full map height
         },
         indestructible: true
+    },
+    gate: {
+        idString: "gate",
+        name: "Gate",
+        health: 500,
+        scale: 1.0,
+        hitbox: {
+            type: 'rect',
+            width: 8,     // Same width as wall for seamless connection
+            height: 32    // Gate height (can fit players through when open)
+        },
+        indestructible: true
     }
 };

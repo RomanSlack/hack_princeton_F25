@@ -352,6 +352,21 @@ export class Game {
         }
     }
 
+    checkInteractions(player: Player | AIAgent): void {
+        const interactRadiusSquared = 10 * 10; // 10 unit interaction radius
+
+        for (const obstacle of this.obstacles) {
+            if (obstacle.destroyed || obstacle.definition.idString !== 'gate') continue;
+
+            const distSquared = Geometry.distanceSquared(player.position, obstacle.position);
+            if (distSquared <= interactRadiusSquared) {
+                obstacle.toggleOpen();
+                console.log(`[Game] ${player.username} toggled gate ${obstacle.id} - now ${obstacle.open ? 'OPEN' : 'CLOSED'}`);
+                break; // Only interact with one gate at a time
+            }
+        }
+    }
+
     spawnXPOrbs(position: Vector, count: number, xpPerOrb: number): void {
         // Spawn multiple XP orbs in a small radius around the position
         for (let i = 0; i < count; i++) {

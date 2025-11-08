@@ -313,7 +313,7 @@ export class GameClient {
                 }
             }
         } else {
-            // Check for destroyed obstacles and remove them
+            // Check for destroyed obstacles and remove them, or update gate states
             for (const obstacleData of packet.obstacles) {
                 if (obstacleData.destroyed) {
                     const renderObj = this.obstacleSprites.get(obstacleData.id);
@@ -326,6 +326,20 @@ export class GameClient {
                             renderObj.leavesContainer.destroy();
                         }
                         this.obstacleSprites.delete(obstacleData.id);
+                    }
+                } else if (obstacleData.type === 'gate') {
+                    // Update gate if its open state changed
+                    const renderObj = this.obstacleSprites.get(obstacleData.id);
+                    if (renderObj && renderObj['lastOpenState'] !== obstacleData.open) {
+                        // Recreate the gate sprite with new state
+                        this.app.stage.removeChild(renderObj.container);
+                        renderObj.container.destroy();
+                        const newRenderObj = this.createObstacleSprite(obstacleData);
+                        newRenderObj['lastOpenState'] = obstacleData.open;
+                        this.obstacleSprites.set(obstacleData.id, newRenderObj);
+                    } else if (renderObj && renderObj['lastOpenState'] === undefined) {
+                        // Initialize the state tracking
+                        renderObj['lastOpenState'] = obstacleData.open;
                     }
                 }
             }
@@ -375,6 +389,10 @@ export class GameClient {
             document.getElementById('hud')!.style.display = 'none';
             const xpDisplay = document.getElementById('xp-display');
             if (xpDisplay) xpDisplay.style.display = 'none';
+
+            // Show and update leaderboard for spectators
+            this.hud.showLeaderboard();
+            this.hud.updateLeaderboard(packet.players);
         }
 
         // Update lighting system with obstacle data - DISABLED FOR DEBUG
@@ -736,6 +754,54 @@ export class GameClient {
             wall.fill({ color: 0x505050 });
             wall.stroke({ color: 0x303030, width: 0.3 });
             container.addChild(wall);
+        } else if (obstacleData.type === 'gate') {
+            // Gate: 8 wide × 32 tall (vertical gate like a door)
+            const halfWidth = 4 * obstacleData.scale;      // Half of 8
+            const halfHeight = 16 * obstacleData.scale;    // Half of 32
+
+            const gate = new PIXI.Graphics();
+
+            if (obstacleData.open) {
+                // Open gate - draw as two side panels (swung open)
+                // Left panel
+                gate.rect(-halfWidth - 3, -halfHeight, 2, halfHeight * 2);
+                gate.fill({ color: 0x8B4513 }); // Brown wood
+                gate.stroke({ color: 0x654321, width: 0.2 });
+
+                // Right panel
+                gate.rect(halfWidth + 1, -halfHeight, 2, halfHeight * 2);
+                gate.fill({ color: 0x8B4513 });
+                gate.stroke({ color: 0x654321, width: 0.2 });
+
+                // Open indicator (subtle green tint around gate area)
+                const openIndicator = new PIXI.Graphics();
+                openIndicator.rect(-halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
+                openIndicator.fill({ color: 0x00FF00, alpha: 0.1 });
+                container.addChild(openIndicator);
+            } else {
+                // Closed gate - solid wooden door
+                gate.rect(-halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
+                gate.fill({ color: 0x8B4513 }); // Brown wood
+                gate.stroke({ color: 0x654321, width: 0.4 });
+
+                // Add wooden planks detail (horizontal lines)
+                for (let i = 1; i < 4; i++) {
+                    const plankY = -halfHeight + (i * halfHeight * 2 / 4);
+                    gate.moveTo(-halfWidth, plankY);
+                    gate.lineTo(halfWidth, plankY);
+                    gate.stroke({ color: 0x654321, width: 0.2 });
+                }
+
+                // Add metal bands (darker rectangles)
+                const bandWidth = halfWidth * 1.5;
+                const bandHeight = 0.8;
+                gate.rect(-bandWidth, -halfHeight + 4, bandWidth * 2, bandHeight);
+                gate.fill({ color: 0x404040, alpha: 0.8 });
+                gate.rect(-bandWidth, halfHeight - 4, bandWidth * 2, bandHeight);
+                gate.fill({ color: 0x404040, alpha: 0.8 });
+            }
+
+            container.addChild(gate);
         }
 
         container.zIndex = 10; // Obstacles layer (trunks)

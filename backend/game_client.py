@@ -31,13 +31,19 @@ class GameEnvironmentClient:
             logger.error(f"Failed to get game status: {e}")
             raise
 
-    async def register_agent(self, agent_id: str, username: Optional[str] = None) -> Dict[str, Any]:
+    async def register_agent(
+        self,
+        agent_id: str,
+        username: Optional[str] = None,
+        preferred_zone: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Register a new AI agent in the game environment.
 
         Args:
             agent_id: Unique identifier for the agent
             username: Optional display name for the agent
+            preferred_zone: Optional zone preference ("zone1" or "zone2")
 
         Returns:
             Registration response with initial game state
@@ -46,6 +52,8 @@ class GameEnvironmentClient:
             payload = {"agent_id": agent_id}
             if username:
                 payload["username"] = username
+            if preferred_zone:
+                payload["preferredZone"] = preferred_zone
 
             response = await self.client.post(
                 f"{self.base_url}/api/agent/register",
@@ -53,7 +61,8 @@ class GameEnvironmentClient:
             )
             response.raise_for_status()
             data = response.json()
-            logger.info(f"Registered agent {agent_id} at position {data.get('position')}")
+            zone_info = f" in {preferred_zone}" if preferred_zone else ""
+            logger.info(f"Registered agent {agent_id} at position {data.get('position')}{zone_info}")
             return data
         except Exception as e:
             logger.error(f"Failed to register agent {agent_id}: {e}")

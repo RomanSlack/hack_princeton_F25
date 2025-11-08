@@ -52,6 +52,7 @@ const BLOCK_CATEGORIES = {
       { id: 'attack', label: 'Attack', tool_type: 'attack', parameters: { target_player_id: 'string' } },
       { id: 'collect', label: 'Collect', tool_type: 'collect', parameters: {} },
       { id: 'plan', label: 'Plan', tool_type: 'plan', parameters: { plan: 'string' } },
+      { id: 'search', label: 'Search Web', tool_type: 'search', parameters: { query: 'string' } },
     ]
   }
 };

@@ -12,6 +12,7 @@ export class Obstacle extends GameObject {
     health: number;
     maxHealth: number;
     destroyed: boolean = false;
+    open: boolean = false; // For interactive obstacles like gates
 
     constructor(id: number, type: string, position: Vector, rotation: number = 0, scale: number = 1) {
         super(id, position);
@@ -63,7 +64,23 @@ export class Obstacle extends GameObject {
             y: this.position.y,
             rotation: this.rotation,
             scale: this.scale,
-            destroyed: this.destroyed
+            destroyed: this.destroyed,
+            open: this.open
         };
+    }
+
+    toggleOpen(): void {
+        if (this.definition.idString === 'gate') {
+            this.open = !this.open;
+            console.log(`[Obstacle] Gate ${this.id} is now ${this.open ? 'OPEN' : 'CLOSED'}`);
+        }
+    }
+
+    isPassable(): boolean {
+        // Gates are passable when open
+        if (this.definition.idString === 'gate' && this.open) {
+            return true;
+        }
+        return this.destroyed;
     }
 }

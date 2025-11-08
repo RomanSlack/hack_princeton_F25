@@ -34,6 +34,7 @@ export interface InputPacket {
         switchWeapon: boolean;
         pickup: boolean;
         reload: boolean;
+        interact: boolean;
     };
 }
 
@@ -67,6 +68,7 @@ export interface ObstacleData {
     rotation: number;
     scale: number;
     destroyed: boolean;
+    open?: boolean; // For interactive obstacles like gates
 }
 
 export interface LootData {

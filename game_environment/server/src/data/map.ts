@@ -177,15 +177,23 @@ const ZONE_2_DATA = {
         // Right wall
         { type: "wall_vertical", x: ZONE_2_OFFSET_X + 252, y: ZONE_2_OFFSET_Y + 128, rotation: 0, scale: 0.5 },
 
+        // CENTER DIVIDING WALL (vertical, splits Zone 2 in half)
+        // Top section of dividing wall (from top to gate)
+        { type: "wall_vertical", x: ZONE_2_OFFSET_X + 128, y: ZONE_2_OFFSET_Y + 56, rotation: 0, scale: 0.21875 }, // 112 tall (256*0.21875)
+        // Gate in the middle (interactive!)
+        { type: "gate", x: ZONE_2_OFFSET_X + 128, y: ZONE_2_OFFSET_Y + 128, rotation: 0, scale: 1.0 }, // 32 tall
+        // Bottom section of dividing wall (from gate to bottom)
+        { type: "wall_vertical", x: ZONE_2_OFFSET_X + 128, y: ZONE_2_OFFSET_Y + 200, rotation: 0, scale: 0.21875 }, // 112 tall (256*0.21875)
+
         // 3 trees near perimeter
         { type: "tree", x: ZONE_2_OFFSET_X + 30, y: ZONE_2_OFFSET_Y + 30, rotation: 0, scale: 1.0 },   // Top-left corner
         { type: "tree", x: ZONE_2_OFFSET_X + 226, y: ZONE_2_OFFSET_Y + 30, rotation: 0, scale: 1.0 },  // Top-right corner
         { type: "tree", x: ZONE_2_OFFSET_X + 128, y: ZONE_2_OFFSET_Y + 226, rotation: 0, scale: 1.0 }, // Bottom-center
 
-        // 5 rocks near perimeter
+        // 5 rocks near perimeter (moved some away from center wall)
         { type: "rock", x: ZONE_2_OFFSET_X + 30, y: ZONE_2_OFFSET_Y + 128, rotation: 0, scale: 0.9 },  // Left-center
         { type: "rock", x: ZONE_2_OFFSET_X + 226, y: ZONE_2_OFFSET_Y + 128, rotation: 0, scale: 0.9 }, // Right-center
-        { type: "rock", x: ZONE_2_OFFSET_X + 128, y: ZONE_2_OFFSET_Y + 30, rotation: 0, scale: 0.9 },  // Top-center
+        { type: "rock", x: ZONE_2_OFFSET_X + 80, y: ZONE_2_OFFSET_Y + 30, rotation: 0, scale: 0.9 },  // Top-left
         { type: "rock", x: ZONE_2_OFFSET_X + 60, y: ZONE_2_OFFSET_Y + 226, rotation: 0, scale: 0.85 }, // Bottom-left
         { type: "rock", x: ZONE_2_OFFSET_X + 196, y: ZONE_2_OFFSET_Y + 226, rotation: 0, scale: 0.85 }, // Bottom-right
     ],
