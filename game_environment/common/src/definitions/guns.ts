@@ -30,7 +30,7 @@ export const Guns: Record<string, GunDefinition> = {
     pistol: {
         idString: "pistol",
         name: "Pistol",
-        ammoType: "9mm",
+        ammoType: "universal",
         capacity: 15,
         reloadTime: 1500,
         fireDelay: 150,
@@ -42,7 +42,7 @@ export const Guns: Record<string, GunDefinition> = {
     rifle: {
         idString: "rifle",
         name: "Rifle",
-        ammoType: "556mm",
+        ammoType: "universal",
         capacity: 30,
         reloadTime: 2200,
         fireDelay: 100,
@@ -54,7 +54,7 @@ export const Guns: Record<string, GunDefinition> = {
     shotgun: {
         idString: "shotgun",
         name: "Shotgun",
-        ammoType: "12g",
+        ammoType: "universal",
         capacity: 8,
         reloadTime: 800,
         fireDelay: 900,

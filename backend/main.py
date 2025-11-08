@@ -200,7 +200,7 @@ def create_llm_provider() -> LLMProvider:
 class ToolConnection(BaseModel):
     """Connection from an Agent block to a Tool block"""
     tool_id: str = Field(..., description="ID of the tool block to connect to")
-    tool_name: Literal["move", "attack", "collect", "plan", "search"] = Field(
+    tool_name: Literal["move", "attack", "collect", "plan", "search", "switch_weapon"] = Field(
         ..., description="Name of the tool (must match the tool block's tool_type)"
     )
 
@@ -239,7 +239,7 @@ class ToolBlock(BaseModel):
     """Tool block - executes a game action"""
     id: str = Field(..., description="Unique identifier for this block")
     type: Literal["tool"] = "tool"
-    tool_type: Literal["move", "attack", "collect", "plan", "search"] = Field(
+    tool_type: Literal["move", "attack", "collect", "plan", "search", "switch_weapon"] = Field(
         ..., description="Type of tool action"
     )
     parameters: Dict[str, str] = Field(
@@ -341,7 +341,7 @@ class NextStepRequest(BaseModel):
 
 class ToolAction(BaseModel):
     """Response model for a tool action"""
-    tool_type: Literal["move", "attack", "collect", "plan", "search"]
+    tool_type: Literal["move", "attack", "collect", "plan", "search", "switch_weapon"]
     parameters: Dict[str, Any] = Field(
         default_factory=dict,
         description="Parameters for the tool (e.g., direction for move, target for attack)"
@@ -422,24 +422,34 @@ def game_state_to_llm_format(game_state: GameState) -> str:
     if game_state.health is not None:
         parts.append(f"Health: {game_state.health:.0f}/{game_state.max_health:.0f}")
 
-    # Add weapon state information
+    # Add weapon state information - show both weapon slots
     if hasattr(game_state, 'weapon_state') and game_state.weapon_state:
         ws = game_state.weapon_state
-        weapon_info = f"Weapon: {ws.get('active_weapon', 'none')}"
-        if ws.get('active_weapon') != 'fists':
+        active_slot = ws.get('active_weapon_slot', 0)
+
+        # Show active weapon with details
+        weapon_info = f"Active weapon (slot {active_slot}): {ws.get('active_weapon', 'none')}"
+        if ws.get('active_weapon') != 'fists' and ws.get('active_weapon') != 'none':
             weapon_info += f" ({ws.get('active_weapon_ammo', 0)}/{ws.get('active_weapon_capacity', 0)} ammo)"
             if ws.get('is_reloading'):
                 weapon_info += " [RELOADING]"
         parts.append(weapon_info)
 
-    # Add ammo reserves
+        # Show other weapon slot
+        other_slot = 1 if active_slot == 0 else 0
+        other_weapon = ws.get(f'weapon_slot_{other_slot}', 'none')
+        other_ammo = ws.get(f'weapon_slot_{other_slot}_ammo', 0)
+        if other_weapon != 'none':
+            if other_weapon == 'fists':
+                parts.append(f"Other weapon (slot {other_slot}): {other_weapon} (melee, always ready)")
+            else:
+                parts.append(f"Other weapon (slot {other_slot}): {other_weapon} ({other_ammo} ammo)")
+
+    # Add ammo reserves (universal ammo)
     if hasattr(game_state, 'ammo') and game_state.ammo:
-        ammo_parts = []
-        for ammo_type, count in game_state.ammo.items():
-            if count > 0:
-                ammo_parts.append(f"{ammo_type}: {count}")
-        if ammo_parts:
-            parts.append(f"Ammo reserves: {', '.join(ammo_parts)}")
+        universal_ammo = game_state.ammo.get('universal', 0)
+        if universal_ammo > 0:
+            parts.append(f"Ammo: {universal_ammo} rounds")
 
     if game_state.inventory:
         parts.append(f"Inventory: {', '.join(game_state.inventory)}")
@@ -459,6 +469,12 @@ def game_state_to_llm_format(game_state: GameState) -> str:
             parts.append(f"Nearby loot: {loot_count} items (closest: {closest_loot.get('type')} at {closest_loot.get('distance', 0):.1f} units)")
         else:
             parts.append(f"Nearby loot: {loot_count} items")
+
+    # Add nearby obstacles summary
+    if hasattr(game_state, 'nearby_obstacles') and game_state.nearby_obstacles:
+        destructible = [o for o in game_state.nearby_obstacles if o.get('type') in ['tree', 'rock', 'crate']]
+        if destructible:
+            parts.append(f"Nearby obstacles: {len(destructible)} destructible")
 
     if not parts:
         return "No specific game state information available."
@@ -550,6 +566,17 @@ async def execute_agent_block(
         else:
             loot_context = "\n*** NO NEARBY LOOT - Move around to find items ***\n"
 
+    # Build obstacle context
+    obstacle_context = ""
+    nearby_obstacles = game_state.nearby_obstacles if hasattr(game_state, 'nearby_obstacles') and game_state.nearby_obstacles else []
+    if nearby_obstacles:
+        destructible = [o for o in nearby_obstacles if o.get('type') in ['tree', 'rock', 'crate']]
+        if destructible:
+            obstacle_context = "\n*** NEARBY OBSTACLES (can block shots!) ***\n"
+            for obs in destructible[:5]:
+                obstacle_context += f"- {obs.get('type')} at distance {obs.get('distance', 0):.1f} (health: {obs.get('health', 0)})\n"
+            obstacle_context += "TIP: Obstacles can block your bullets! If stuck, shoot them to destroy or move around.\n"
+
     # Build attack-specific context if attack tool is available
     attack_context = ""
     if "attack" in available_tools:
@@ -570,6 +597,7 @@ async def execute_agent_block(
         f"{past_actions_str}\n"
         f"Available actions:\n" + "\n".join(f"- {info}" for info in available_tools_info) + "\n"
         f"{loot_context}\n"
+        f"{obstacle_context}\n"
         f"{attack_context}\n"
         f"IMPORTANT RULES:\n"
         f"MOVEMENT:\n"
@@ -579,22 +607,35 @@ async def execute_agent_block(
         f"- Y-axis: NEGATIVE y moves UP (toward y=8), POSITIVE y moves DOWN (toward y=504)\n"
         f"- X-axis: NEGATIVE x moves LEFT (toward x=8), POSITIVE x moves RIGHT (toward x=504)\n"
         f"ATTACK & AMMO MANAGEMENT:\n"
-        f"- Attack tool will auto-aim at the target and shoot your equipped weapon\n"
+        f"- Attack tool will auto-aim at the target and shoot your ACTIVE weapon\n"
         f"- NO COOLDOWN on guns - you can attack every game tick if you have ammo\n"
         f"- Attacking happens BEFORE movement in the game tick\n"
-        f"- AMMO IS LIMITED - conserve it! You start with only 15 rounds (1 magazine)\n"
+        f"- AMMO IS EXTREMELY LIMITED - you start with only 5 rounds! Use wisely!\n"
         f"- Check your weapon_state to see current ammo before attacking\n"
         f"- If weapon shows [RELOADING], you CANNOT attack (wait for reload to finish)\n"
-        f"- Ammo is SCARCE on the map - look for ammo loot in nearby_loot list\n"
-        f"- Ammo types: ammo_9mm (pistol), ammo_556mm (rifle), ammo_12g (shotgun)\n"
+        f"OBSTACLES & LINE OF SIGHT:\n"
+        f"- Trees, rocks, and crates BLOCK bullets and can be DESTROYED by shooting them\n"
+        f"- If attacking but not hitting enemy, check nearby obstacles - may need to move or destroy obstacle\n"
+        f"- Destroying obstacles gives XP: trees=50 XP, rocks=100 XP, crates=30 XP\n"
+        f"- Walls and gates are indestructible\n"
+        f"WEAPON SWITCHING (CRITICAL FOR CLOSE COMBAT!):\n"
+        f"- You have 2 weapon slots: slot 0 (fists) and slot 1 (pistol/rifle/shotgun)\n"
+        f"- Fists are MELEE weapons - they work when close (within ~6 units) and NEVER run out\n"
+        f"- If your active gun has 0 ammo and enemies are close, SWITCH to fists immediately!\n"
+        f"- Use 'switch_weapon' action (no parameters) to toggle between your two weapons\n"
+        f"- After switching, you can attack with the new weapon\n"
+        f"RESOURCE MANAGEMENT:\n"
+        f"- Ammo is SCARCE on the map - look for ammo_universal in nearby_loot list\n"
+        f"- All ammo is UNIVERSAL - it works with all guns (pistol, rifle, shotgun)\n"
         f"- Use 'collect' action when near ammo/items to pick them up (no parameters needed)\n"
         f"- Combat is less deadly now - focus on survival and resource gathering\n"
         f"- Choose targets wisely from the nearby agents list above\n\n"
         f"Respond with nothing but a JSON object containing 'reasoning' (a brief 1-sentence explanation), 'action' (the action name), and 'parameters' (an object with the required parameters).\n"
         f"Examples:\n"
-        f"- Move: {{\"reasoning\": \"Moving toward center\", \"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -10}}}}\n"
-        f"- Attack: {{\"reasoning\": \"Attacking nearest enemy\", \"action\": \"attack\", \"parameters\": {{\"target_player_id\": \"player_2\"}}}}\n"
-        f"- Collect: {{\"reasoning\": \"Picking up ammo\", \"action\": \"collect\", \"parameters\": {{}}}}"
+        f"- Move: {{\"reasoning\": \"Moving toward ammo\", \"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -10}}}}\n"
+        f"- Attack: {{\"reasoning\": \"Shooting enemy\", \"action\": \"attack\", \"parameters\": {{\"target_player_id\": \"3\"}}}}\n"
+        f"- Collect: {{\"reasoning\": \"Picking up ammo\", \"action\": \"collect\", \"parameters\": {{}}}}\n"
+        f"- Switch weapon: {{\"reasoning\": \"Switching to fists since pistol is empty\", \"action\": \"switch_weapon\", \"parameters\": {{}}}}"
     )
 
     full_input = agent_block.system_prompt + "\n\n" + user_input

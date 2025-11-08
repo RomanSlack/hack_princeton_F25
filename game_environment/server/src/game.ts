@@ -234,7 +234,7 @@ export class Game {
         // Give fists and starter pistol
         player.addWeapon("fists");
         player.addWeapon("pistol");
-        player.addAmmo("9mm", 15); // Only 1 magazine worth
+        player.addAmmo("universal", 5); // 66% less than 15 = 5 rounds
 
         this.players.set(player.id, player);
         this.grid.addObject(player);
@@ -269,7 +269,7 @@ export class Game {
         // Give fists and starter pistol
         agent.addWeapon("fists");
         agent.addWeapon("pistol");
-        agent.addAmmo("9mm", 15); // Only 1 magazine worth
+        agent.addAmmo("universal", 5); // 66% less than 15 = 5 rounds
 
         this.aiAgents.set(agentId, agent);
         this.grid.addObject(agent);

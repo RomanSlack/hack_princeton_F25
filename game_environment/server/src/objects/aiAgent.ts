@@ -21,9 +21,7 @@ export class AIAgent extends GameObject {
     weapons: [Gun | null, Gun | null] = [null, null];
     activeWeaponIndex: 0 | 1 = 0;
     ammo: Map<string, number> = new Map([
-        ["9mm", 0],
-        ["556mm", 0],
-        ["12g", 0]
+        ["universal", 0]
     ]);
 
     // AI-specific properties
@@ -334,14 +332,12 @@ export class AIAgent extends GameObject {
         this.maxHealth = GameConstants.PLAYER_MAX_HEALTH * healthMultiplier;
         this.xp = 0; // Reset XP to 0
 
-        // Reset weapons and ammo - limited starting ammo
+        // Reset weapons and ammo - very limited starting ammo (66% less)
         this.weapons = [null, null];
         this.activeWeaponIndex = 0;
         this.addWeapon("fists");
         this.addWeapon("pistol");
-        this.ammo.set("9mm", 15); // Only 1 magazine worth
-        this.ammo.set("556mm", 0);
-        this.ammo.set("12g", 0);
+        this.ammo.set("universal", 5); // 66% less than 15 = 5 rounds
 
         // Clear justDied flag after respawn
         this.justDied = false;

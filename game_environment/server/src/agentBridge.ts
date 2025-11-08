@@ -15,6 +15,7 @@ export interface BackendAction {
         target_player_id?: string;
         plan?: string;
         query?: string;
+        weapon_slot?: number;
     };
 }
 
@@ -94,6 +95,9 @@ export class AgentBridge {
                 break;
             case "collect":
                 this.applyCollectCommand(input, action, agent);
+                break;
+            case "switch_weapon":
+                this.applySwitchWeaponCommand(input, action, agent);
                 break;
             case "plan":
                 // Plan doesn't directly affect input, just store it
@@ -178,6 +182,14 @@ export class AgentBridge {
     }
 
     /**
+     * Apply switch weapon command - switches between weapon slots
+     */
+    private applySwitchWeaponCommand(input: InputPacket, action: BackendAction, agent: AIAgent): void {
+        input.actions.switchWeapon = true;
+        console.log(`[AgentBridge] Agent ${agent.username} switching weapon (current slot: ${agent.activeWeaponIndex})`);
+    }
+
+    /**
      * Get game state for agent in backend-compatible format
      */
     getGameStateForAgent(agent: AIAgent): BackendGameState {
@@ -189,14 +201,22 @@ export class AgentBridge {
         if (agent.weapons[0]) inventory.push(agent.weapons[0].definition.idString);
         if (agent.weapons[1]) inventory.push(agent.weapons[1].definition.idString);
 
-        // Get active weapon state for better agent decision making
+        // Get weapon state for both slots for better agent decision making
         const activeWeapon = agent.weapons[agent.activeWeaponIndex];
+        const weapon0 = agent.weapons[0];
+        const weapon1 = agent.weapons[1];
+
         const weaponState = {
+            active_weapon_slot: agent.activeWeaponIndex,
             active_weapon: activeWeapon ? activeWeapon.definition.idString : "none",
             active_weapon_ammo: activeWeapon ? activeWeapon.ammo : 0,
             active_weapon_capacity: activeWeapon ? activeWeapon.definition.capacity : 0,
             can_shoot: activeWeapon ? activeWeapon.canShoot(Date.now()) : false,
-            is_reloading: activeWeapon ? activeWeapon.reloading : false
+            is_reloading: activeWeapon ? activeWeapon.reloading : false,
+            weapon_slot_0: weapon0 ? weapon0.definition.idString : "none",
+            weapon_slot_0_ammo: weapon0 ? weapon0.ammo : 0,
+            weapon_slot_1: weapon1 ? weapon1.definition.idString : "none",
+            weapon_slot_1_ammo: weapon1 ? weapon1.ammo : 0
         };
 
         // Get nearby agents (both human players and AI agents)
