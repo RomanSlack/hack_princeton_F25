@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Backend port - update if your backend runs on a different port
 const BACKEND_URL = 'http://localhost:8001';
@@ -71,6 +72,7 @@ const INSTRUCTIONS = [
 ];
 
 export default function AgentGameBuilder() {
+  const theme = useTheme();
   const [blocks, setBlocks] = useState([]);
   const [connections, setConnections] = useState([]);
   const [draggedBlock, setDraggedBlock] = useState(null);
@@ -396,16 +398,16 @@ export default function AgentGameBuilder() {
 
   return (
     <div
-      className="flex h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100"
+      className={`flex h-[calc(100vh-4rem)] overflow-hidden ${theme.bg.primary}`}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
       {/* Left Column - Game Preview & Run Button (2/5 width) */}
-      <div className="w-2/5 flex flex-col bg-white border-r border-slate-200 shadow-lg h-full overflow-hidden">
+      <div className={`w-2/5 flex flex-col ${theme.bg.secondary} ${theme.border.primary} border-r shadow-lg h-full overflow-hidden`}>
         {/* Top - Game Iframe */}
         <div className="flex-1 p-3 flex flex-col min-h-0 overflow-hidden">
           <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Game Preview</h3>
+            <h3 className={`text-xs font-bold ${theme.text.primary} uppercase tracking-wide`}>Game Preview</h3>
             <a
               href="http://localhost:3000"
               target="_blank"
@@ -416,7 +418,7 @@ export default function AgentGameBuilder() {
               ↗
             </a>
           </div>
-          <div className="flex-1 relative bg-slate-900 rounded-lg border-2 border-slate-300 overflow-hidden shadow-inner min-h-0">
+          <div className={`flex-1 relative bg-slate-900 dark:bg-slate-950 rounded-lg border-2 ${theme.border.secondary} overflow-hidden shadow-inner min-h-0`}>
             <iframe
               src="http://localhost:3000"
               className="w-full h-full border-0"
@@ -427,7 +429,7 @@ export default function AgentGameBuilder() {
         </div>
 
         {/* Bottom - Deploy Button */}
-        <div className="p-3 border-t border-slate-200 flex-shrink-0">
+        <div className={`p-3 border-t ${theme.border.primary} flex-shrink-0`}>
           <button
             onClick={handleDeploy}
             disabled={deploying}
@@ -440,7 +442,7 @@ export default function AgentGameBuilder() {
             <span className="text-sm">{deploying ? 'DEPLOYING...' : 'DEPLOY AGENT'}</span>
           </button>
 
-          <div className="mt-2 text-xs text-slate-500 text-center">
+          <div className={`mt-2 text-xs ${theme.text.tertiary} text-center`}>
             <p className="font-semibold">Blocks: {blocks.length} | Connections: {connections.length}</p>
           </div>
         </div>
@@ -449,33 +451,33 @@ export default function AgentGameBuilder() {
       {/* Right Side - Instructions & Builder Area (3/5 width) */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-full">
         {/* Top - Instructions Section */}
-        <div className="bg-white border-b border-slate-200 shadow-sm flex-shrink-0 overflow-hidden">
+        <div className={`${theme.bg.secondary} border-b ${theme.border.primary} shadow-sm flex-shrink-0 overflow-hidden`}>
           <div className="px-6 py-2.5 flex items-center justify-between gap-3">
             <button
               onClick={prevInstruction}
-              className="p-1.5 rounded-full hover:bg-slate-100 transition flex-shrink-0"
+              className={`p-1.5 rounded-full ${theme.bg.hover} transition flex-shrink-0`}
               title="Previous"
             >
-              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-5 h-5 ${theme.text.secondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
             <div className="flex-1 text-center min-w-0">
-              <h2 className="text-base font-bold text-slate-800">
+              <h2 className={`text-base font-bold ${theme.text.primary}`}>
                 {INSTRUCTIONS[currentInstruction].title}
               </h2>
-              <p className="text-sm text-slate-600">
+              <p className={`text-sm ${theme.text.secondary}`}>
                 {INSTRUCTIONS[currentInstruction].content}
               </p>
             </div>
 
             <button
               onClick={nextInstruction}
-              className="p-1.5 rounded-full hover:bg-slate-100 transition flex-shrink-0"
+              className={`p-1.5 rounded-full ${theme.bg.hover} transition flex-shrink-0`}
               title="Next"
             >
-              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-5 h-5 ${theme.text.secondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -498,10 +500,10 @@ export default function AgentGameBuilder() {
         {/* Bottom - Builder Container */}
         <div className="flex-1 flex relative min-h-0 overflow-hidden">
           {/* Sidebar - Blocks Palette */}
-          <div className="w-64 bg-white border-r border-slate-200 shadow-md p-4 flex-shrink-0 overflow-y-auto">
-            <h2 className="font-bold text-slate-800 mb-4 text-xl">Block Builder</h2>
+          <div className={`w-64 ${theme.bg.secondary} border-r ${theme.border.primary} shadow-md p-4 flex-shrink-0 overflow-y-auto`}>
+            <h2 className={`font-bold ${theme.text.primary} mb-4 text-xl`}>Block Builder</h2>
             <div className="mb-1">
-              <label className="text-sm font-bold text-gray-700">Agent ID</label>
+              <label className={`text-sm font-bold ${theme.text.secondary}`}>Agent ID</label>
             </div>
             
             {/* Agent ID input */}
@@ -511,14 +513,19 @@ export default function AgentGameBuilder() {
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
                 placeholder="e.g., bot_001"
-                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-3 py-2 ${theme.components.input.border} border rounded text-sm ${theme.components.input.bg} ${theme.components.input.text} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                style={theme.isDark ? { 
+                  backgroundColor: '#3a3a3a', 
+                  color: '#ffffff',
+                  borderColor: '#404040'
+                } : {}}
               />
             </div>
 
             {/* Block categories */}
             {Object.entries(BLOCK_CATEGORIES).map(([categoryKey, category]) => (
               <div key={categoryKey} className="mb-4">
-                <h3 className="text-sm font-bold mb-1 text-gray-700">{category.label}</h3>
+                <h3 className={`text-sm font-bold mb-1 ${theme.text.secondary}`}>{category.label}</h3>
                 <div className="space-y-2">
                   {category.blocks.map(blockDef => (
                     <div
@@ -534,7 +541,7 @@ export default function AgentGameBuilder() {
               </div>
             ))}
 
-            <div className="mt-6 text-xs text-gray-600">
+            <div className={`mt-6 text-xs ${theme.text.tertiary}`}>
               <p className="font-bold mb-2">Controls:</p>
               <ul className="space-y-1">
                 <li>• Drag block to canvas</li>
@@ -564,9 +571,11 @@ export default function AgentGameBuilder() {
           {/* Canvas - Node Workspace */}
           <div
             ref={canvasRef}
-            className="flex-1 relative bg-slate-50 overflow-hidden"
+            className={`flex-1 relative ${theme.bg.canvas} overflow-hidden`}
             style={{
-              backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+              backgroundImage: theme.isDark 
+                ? 'radial-gradient(circle, #404040 1px, transparent 1px)'
+                : 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
               backgroundSize: '24px 24px'
             }}
           >
@@ -659,13 +668,13 @@ export default function AgentGameBuilder() {
             {/* Empty state instructions */}
             {blocks.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-slate-400 text-center px-8">
+                <div className={`${theme.text.tertiary} text-center px-8`}>
                   <svg className="w-24 h-24 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <p className="text-2xl font-bold mb-2">Start Building Your Agent</p>
-                  <p className="text-lg">Drag blocks from the left sidebar onto this canvas</p>
-                  <p className="text-sm mt-2">Right-click blocks to create connections</p>
+                  <p className={`text-2xl font-bold mb-2 ${theme.text.primary}`}>Start Building Your Agent</p>
+                  <p className={`text-lg ${theme.text.secondary}`}>Drag blocks from the left sidebar onto this canvas</p>
+                  <p className={`text-sm mt-2 ${theme.text.tertiary}`}>Right-click blocks to create connections</p>
                 </div>
               </div>
             )}
@@ -745,51 +754,74 @@ function AgentConfigModal({ block, onSave, onDelete, onClose }) {
     onDelete(block.id);
   };
 
+  const theme = useTheme();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-xl font-bold mb-4">Configure Agent Block</h2>
+      <div 
+        className={`${theme.bg.modal} ${theme.text.primary} rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto shadow-xl`} 
+        style={theme.isDark ? { backgroundColor: '#2d2d2d' } : { backgroundColor: '#ffffff' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className={`text-xl font-bold mb-4 ${theme.text.primary}`}>Configure Agent Block</h2>
 
         <div className="space-y-4">
           {/* Model Selection */}
           <div className="mb-1">
-            <label className="text-sm font-bold text-gray-700">Model</label>
+            <label className={`text-sm font-bold ${theme.text.secondary}`}>Model</label>
           </div>
           <div className="mb-4">
             <select
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full px-3 py-2 ${theme.components.input.border} border rounded text-sm ${theme.components.input.bg} ${theme.components.input.text} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              style={theme.isDark ? { backgroundColor: '#3a3a3a', color: '#ffffff' } : {}}
             >
               {MODELS.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
+                <option 
+                  key={m.value} 
+                  value={m.value}
+                  style={theme.isDark ? { backgroundColor: '#3a3a3a', color: '#ffffff' } : {}}
+                >
+                  {m.label}
+                </option>
               ))}
             </select>
           </div>
 
           {/* System Prompt */}
           <div className="mb-1">
-            <label className="text-sm font-bold text-gray-700">System Prompt</label>
+            <label className={`text-sm font-bold ${theme.text.secondary}`}>System Prompt</label>
           </div>
           <div className="mb-4">
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
               placeholder="e.g., You are a tactical battle royale AI agent..."
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+              className={`w-full px-3 py-2 ${theme.components.input.border} border rounded text-sm h-24 resize-none ${theme.components.input.bg} ${theme.components.input.text} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              style={theme.isDark ? { 
+                backgroundColor: '#3a3a3a', 
+                color: '#ffffff',
+                borderColor: '#404040'
+              } : {}}
             />
           </div>
 
           {/* User Prompt */}
           <div className="mb-1">
-            <label className="text-sm font-bold text-gray-700">User Prompt</label>
+            <label className={`text-sm font-bold ${theme.text.secondary}`}>User Prompt</label>
           </div>
           <div className="mb-4">
             <textarea
               value={userPrompt}
               onChange={(e) => setUserPrompt(e.target.value)}
               placeholder="e.g., Analyze the game state and choose your best action..."
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+              className={`w-full px-3 py-2 ${theme.components.input.border} border rounded text-sm h-24 resize-none ${theme.components.input.bg} ${theme.components.input.text} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+              style={theme.isDark ? { 
+                backgroundColor: '#3a3a3a', 
+                color: '#ffffff',
+                borderColor: '#404040'
+              } : {}}
             />
           </div>
         </div>
@@ -804,7 +836,7 @@ function AgentConfigModal({ block, onSave, onDelete, onClose }) {
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-100 transition-colors"
+              className={`px-4 py-2 ${theme.border.primary} border rounded ${theme.bg.hover} transition-colors ${theme.text.primary}`}
             >
               Cancel
             </button>

@@ -12,6 +12,9 @@ export function ThemeProvider({ children }) {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       setIsDark(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   }, []);
 
@@ -19,6 +22,11 @@ export function ThemeProvider({ children }) {
     setIsDark(prev => {
       const newValue = !prev;
       localStorage.setItem('theme', newValue ? 'dark' : 'light');
+      if (newValue) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
       return newValue;
     });
   };
@@ -50,7 +58,7 @@ export function ThemeProvider({ children }) {
     // Component-specific colors
     components: {
       card: {
-        bg: isDark ? 'bg-dark-bg-secondary' : 'bg-white',
+        bg: isDark ? 'bg-dark-bg-tertiary' : 'bg-white',
         border: isDark ? 'border-dark-border-primary' : 'border-gray-300',
         hover: isDark ? 'hover:bg-dark-bg-tertiary' : 'hover:bg-slate-50',
       },

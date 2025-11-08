@@ -10,6 +10,35 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode body background */
+.dark body {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Dark mode input styling */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  color: #ffffff;
+}
+
+.dark input[type="text"],
+.dark input[type="number"],
+.dark textarea,
+.dark select {
+  background-color: #3a3a3a;
+  border-color: #404040;
+  color: #ffffff;
 }
 
 /* Canvas styling */
@@ -20,6 +49,12 @@ body {
   overflow: hidden;
   background: linear-gradient(90deg, #f0f0f0 1px, transparent 1px),
               linear-gradient(#f0f0f0 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .canvas {
+  background: linear-gradient(90deg, #404040 1px, transparent 1px),
+              linear-gradient(#404040 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
