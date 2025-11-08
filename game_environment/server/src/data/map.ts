@@ -20,6 +20,63 @@ export const MAP_DATA = {
         // Right wall (vertical) - 8 wide × 512 tall, at x=508
         { type: "wall_vertical", x: 508, y: 256, rotation: 0, scale: 1 },
 
+        // Tree border around the walls (creates forest edge effect)
+        // Top border trees (outside the top wall at y=4)
+        { type: "tree", x: 30, y: -20, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 70, y: -22, rotation: 0, scale: 1.1 },
+        { type: "tree", x: 110, y: -24, rotation: 0, scale: 0.95 },
+        { type: "tree", x: 150, y: -21, rotation: 0, scale: 1.05 },
+        { type: "tree", x: 190, y: -23, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 230, y: -20, rotation: 0, scale: 1.0 },
+        { type: "tree", x: 270, y: -22, rotation: 0, scale: 1.1 },
+        { type: "tree", x: 310, y: -24, rotation: 0, scale: 0.95 },
+        { type: "tree", x: 350, y: -21, rotation: 0, scale: 1.05 },
+        { type: "tree", x: 390, y: -23, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 430, y: -20, rotation: 0, scale: 1.0 },
+        { type: "tree", x: 470, y: -22, rotation: 0, scale: 1.1 },
+
+        // Bottom border trees (outside the bottom wall at y=508)
+        { type: "tree", x: 30, y: 532, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 70, y: 534, rotation: 0, scale: 1.1 },
+        { type: "tree", x: 110, y: 536, rotation: 0, scale: 0.95 },
+        { type: "tree", x: 150, y: 533, rotation: 0, scale: 1.05 },
+        { type: "tree", x: 190, y: 535, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 230, y: 532, rotation: 0, scale: 1.0 },
+        { type: "tree", x: 270, y: 534, rotation: 0, scale: 1.1 },
+        { type: "tree", x: 310, y: 536, rotation: 0, scale: 0.95 },
+        { type: "tree", x: 350, y: 533, rotation: 0, scale: 1.05 },
+        { type: "tree", x: 390, y: 535, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 430, y: 532, rotation: 0, scale: 1.0 },
+        { type: "tree", x: 470, y: 534, rotation: 0, scale: 1.1 },
+
+        // Left border trees (outside the left wall at x=4)
+        { type: "tree", x: -20, y: 30, rotation: 0, scale: 0.9 },
+        { type: "tree", x: -22, y: 70, rotation: 0, scale: 1.1 },
+        { type: "tree", x: -24, y: 110, rotation: 0, scale: 0.95 },
+        { type: "tree", x: -21, y: 150, rotation: 0, scale: 1.05 },
+        { type: "tree", x: -23, y: 190, rotation: 0, scale: 0.9 },
+        { type: "tree", x: -20, y: 230, rotation: 0, scale: 1.0 },
+        { type: "tree", x: -22, y: 270, rotation: 0, scale: 1.1 },
+        { type: "tree", x: -24, y: 310, rotation: 0, scale: 0.95 },
+        { type: "tree", x: -21, y: 350, rotation: 0, scale: 1.05 },
+        { type: "tree", x: -23, y: 390, rotation: 0, scale: 0.9 },
+        { type: "tree", x: -20, y: 430, rotation: 0, scale: 1.0 },
+        { type: "tree", x: -22, y: 470, rotation: 0, scale: 1.1 },
+
+        // Right border trees (outside the right wall at x=508)
+        { type: "tree", x: 532, y: 30, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 534, y: 70, rotation: 0, scale: 1.1 },
+        { type: "tree", x: 536, y: 110, rotation: 0, scale: 0.95 },
+        { type: "tree", x: 533, y: 150, rotation: 0, scale: 1.05 },
+        { type: "tree", x: 535, y: 190, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 532, y: 230, rotation: 0, scale: 1.0 },
+        { type: "tree", x: 534, y: 270, rotation: 0, scale: 1.1 },
+        { type: "tree", x: 536, y: 310, rotation: 0, scale: 0.95 },
+        { type: "tree", x: 533, y: 350, rotation: 0, scale: 1.05 },
+        { type: "tree", x: 535, y: 390, rotation: 0, scale: 0.9 },
+        { type: "tree", x: 532, y: 430, rotation: 0, scale: 1.0 },
+        { type: "tree", x: 534, y: 470, rotation: 0, scale: 1.1 },
+
         // Trees scattered around
         { type: "tree", x: 50, y: 50, rotation: 0 },
         { type: "tree", x: 120, y: 80, rotation: 0 },
