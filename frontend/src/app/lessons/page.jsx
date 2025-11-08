@@ -1,88 +1,509 @@
 'use client'
 
-import { useState, useMemo } from 'react';
-import LessonCard from '../../components/LessonCard';
-import LessonRoadmap from '../../components/LessonRoadmap';
-import SearchBar from '../../components/SearchBar';
+import { useState } from 'react';
+import NeetCodeRoadmap from '../../components/NeetCodeRoadmap';
+import ComponentDetailSidebar from '../../components/ComponentDetailSidebar';
 
-// Lesson data structure
+// Lesson data structure - Comprehensive Agentic AI Curriculum
+// Based on IBM's Agentic AI framework: https://www.ibm.com/think/topics/agentic-ai
 const LESSONS = [
+  // ========== LEVEL 1: FOUNDATIONS ==========
   {
     id: 1,
+    title: 'Introduction to Agentic AI',
+    focus: 'Core Concepts & Fundamentals',
+    learningObjective: 'Understand what agentic AI is and how it differs from traditional AI',
+    tool: 'Conceptual framework',
+    description: 'Learn the fundamentals of agentic AI systems that can accomplish goals with limited supervision. Understand autonomy, goal-driven behavior, and how agentic AI extends generative AI capabilities.',
+    prerequisites: [],
+    difficulty: 'Beginner',
+    estimatedTime: '20 min',
+  },
+  {
+    id: 2,
     title: 'Perception',
     focus: 'Input & Environment Awareness',
-    learningObjective: 'Learn how agents "see" the world via sensors or context',
-    tool: 'Observation tool',
-    description: 'Understanding how AI agents perceive and interpret their environment through various input mechanisms.',
+    learningObjective: 'Learn how agents collect and interpret data from their environment',
+    tool: 'Sensors, APIs, databases',
+    description: 'Understanding how AI agents perceive their environment through sensors, APIs, databases, and user interactions. This is the foundation for all agentic operations.',
     prerequisites: [],
     difficulty: 'Beginner',
     estimatedTime: '15 min',
   },
   {
-    id: 2,
-    title: 'Reasoning & Planning',
-    focus: 'Task decomposition',
-    learningObjective: 'Understand how agents plan steps from goals',
-    tool: 'Next-step planner',
-    description: 'Learn how agents break down complex goals into actionable steps and create execution plans.',
-    prerequisites: [1],
+    id: 3,
+    title: 'Simple Reflex Agents',
+    focus: 'Basic Agent Architecture',
+    learningObjective: 'Build your first simple reflex agent that responds to immediate conditions',
+    tool: 'Condition-action rules',
+    description: 'Learn the simplest form of AI agents that respond directly to current percepts without maintaining internal state or memory.',
+    prerequisites: [1, 2],
+    difficulty: 'Beginner',
+    estimatedTime: '20 min',
+  },
+
+  // ========== LEVEL 2: CORE COMPONENTS ==========
+  {
+    id: 4,
+    title: 'Reasoning',
+    focus: 'Logical Processing & Analysis',
+    learningObjective: 'Master how agents process information to extract meaningful insights',
+    tool: 'NLP, pattern detection, context understanding',
+    description: 'Learn how agents use natural language processing, computer vision, and pattern detection to interpret queries, understand context, and determine appropriate actions.',
+    prerequisites: [2],
     difficulty: 'Intermediate',
     estimatedTime: '25 min',
   },
   {
-    id: 3,
-    title: 'Tool Use',
-    focus: 'External API calls',
-    learningObjective: 'Learn how agents extend themselves via tools',
-    tool: 'Python backend API tools',
-    description: 'Explore how agents interact with external systems and APIs to extend their capabilities.',
-    prerequisites: [1, 2],
+    id: 5,
+    title: 'Planning',
+    focus: 'Task Decomposition & Strategy',
+    learningObjective: 'Understand how agents break down goals into actionable steps',
+    tool: 'Decision trees, planning algorithms',
+    description: 'Explore how agents develop strategies to achieve objectives using decision trees, reinforcement learning, and other planning algorithms to create execution plans.',
+    prerequisites: [4],
     difficulty: 'Intermediate',
     estimatedTime: '30 min',
   },
   {
-    id: 4,
-    title: 'Memory & Reflection',
-    focus: 'Context updates',
-    learningObjective: 'Grasp how memory helps agents improve',
-    tool: 'State tracking system',
-    description: 'Understand how agents maintain and update their internal state and learn from past experiences.',
-    prerequisites: [2],
+    id: 6,
+    title: 'Goal Setting & Decision-Making',
+    focus: 'Objective Optimization',
+    learningObjective: 'Learn how agents set objectives and choose optimal actions',
+    tool: 'Probabilistic models, utility functions',
+    description: 'Understand how agents evaluate multiple possible actions and select the best course based on efficiency, accuracy, and predicted outcomes using probabilistic models and utility functions.',
+    prerequisites: [4, 5],
     difficulty: 'Intermediate',
-    estimatedTime: '20 min',
+    estimatedTime: '25 min',
   },
   {
-    id: 5,
-    title: 'Multi-Agent Coordination',
-    focus: 'Collaboration',
-    learningObjective: 'Observe emergent behavior from multiple agents',
-    tool: 'Shared world state',
-    description: 'Discover how multiple agents can work together and create emergent behaviors through coordination.',
-    prerequisites: [2, 3],
+    id: 7,
+    title: 'Prompt Engineering',
+    focus: 'Command Design & Instruction',
+    learningObjective: 'Master crafting effective prompts that guide agent behavior',
+    tool: 'Prompt block editing, LLM interaction',
+    description: 'Learn how phrasing and prompt structure affects agent reasoning and behavior. Master techniques for creating prompts that produce desired outcomes.',
+    prerequisites: [2],
+    difficulty: 'Beginner',
+    estimatedTime: '20 min',
+  },
+
+  // ========== LEVEL 3: ADVANCED COMPONENTS ==========
+  {
+    id: 8,
+    title: 'Memory & Reflection',
+    focus: 'State Tracking & Context Management',
+    learningObjective: 'Grasp how memory helps agents maintain context and improve over time',
+    tool: 'State tracking system, context storage',
+    description: 'Understand how agents maintain and update their internal state, store past experiences, and use memory to make better decisions in future interactions.',
+    prerequisites: [5],
+    difficulty: 'Intermediate',
+    estimatedTime: '25 min',
+  },
+  {
+    id: 9,
+    title: 'Learning & Adaptation',
+    focus: 'Continuous Improvement',
+    learningObjective: 'Learn how agents improve through feedback and experience',
+    tool: 'Reinforcement learning, self-supervised learning',
+    description: 'Explore how agents evaluate outcomes, gather feedback, and refine strategies over time using reinforcement learning and self-supervised learning techniques.',
+    prerequisites: [8],
+    difficulty: 'Intermediate',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 10,
+    title: 'Communication',
+    focus: 'Inter-Agent & Human Interaction',
+    learningObjective: 'Understand how agents communicate with each other and humans',
+    tool: 'Natural language interfaces, message passing',
+    description: 'Learn how agents exchange information, coordinate actions, and interact with users through natural language interfaces and structured communication protocols.',
+    prerequisites: [4, 8],
+    difficulty: 'Intermediate',
+    estimatedTime: '25 min',
+  },
+  {
+    id: 11,
+    title: 'Tool Calling',
+    focus: 'External API Integration',
+    learningObjective: 'Master how agents extend capabilities through external tools',
+    tool: 'API calls, web search, database queries',
+    description: 'Discover how agents interact with external systems, call APIs, search the web, query databases, and use tools to extend their capabilities beyond LLM limitations.',
+    prerequisites: [5, 6],
+    difficulty: 'Intermediate',
+    estimatedTime: '30 min',
+  },
+
+  // ========== LEVEL 4: EXECUTION & ORCHESTRATION ==========
+  {
+    id: 12,
+    title: 'Execution & Action',
+    focus: 'Task Implementation',
+    learningObjective: 'Learn how agents execute selected actions in real environments',
+    tool: 'External systems, APIs, robots',
+    description: 'Understand how agents translate decisions into actions by interacting with external systems, APIs, databases, and physical devices to accomplish goals.',
+    prerequisites: [11],
+    difficulty: 'Intermediate',
+    estimatedTime: '25 min',
+  },
+  {
+    id: 13,
+    title: 'Agent Orchestration',
+    focus: 'Workflow Coordination',
+    learningObjective: 'Master coordinating multiple agents in complex workflows',
+    tool: 'Orchestration platforms, workflow automation',
+    description: 'Learn how to coordinate and manage multiple agents, automate AI workflows, track progress, manage resources, monitor data flow, and handle failure events.',
+    prerequisites: [11, 12],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+  {
+    id: 14,
+    title: 'Multi-Agent Systems',
+    focus: 'Collaborative Agent Networks',
+    learningObjective: 'Build systems where multiple agents work together',
+    tool: 'Shared world state, coordination protocols',
+    description: 'Explore architectures for multi-agent systems, including vertical hierarchies with conductor models and horizontal decentralized networks where agents work as equals.',
+    prerequisites: [10, 13],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
+  },
+
+  // ========== LEVEL 5: ADVANCED ARCHITECTURES ==========
+  {
+    id: 15,
+    title: 'ReAct (Reasoning + Acting)',
+    focus: 'Iterative Reasoning Framework',
+    learningObjective: 'Implement the ReAct pattern for reasoning and acting in loops',
+    tool: 'LangGraph, ReAct framework',
+    description: 'Master the ReAct pattern that combines reasoning and acting in iterative loops, allowing agents to think through problems step-by-step while taking actions.',
+    prerequisites: [11, 14],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+  {
+    id: 16,
+    title: 'ReWOO (Reasoning Without Observation)',
+    focus: 'Efficient Reasoning Pattern',
+    learningObjective: 'Learn ReWOO for more efficient agent reasoning',
+    tool: 'ReWOO framework, planning algorithms',
+    description: 'Understand ReWOO (Reasoning Without Observation), a pattern that separates planning from execution to create more efficient and scalable agent systems.',
+    prerequisites: [15],
+    difficulty: 'Advanced',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 17,
+    title: 'Multi-Agent Collaboration',
+    focus: 'Emergent Behaviors',
+    learningObjective: 'Observe and design emergent behaviors from agent interactions',
+    tool: 'Shared protocols, coordination mechanisms',
+    description: 'Discover how multiple agents working together create emergent behaviors, solve complex problems collaboratively, and achieve goals that individual agents cannot.',
+    prerequisites: [14],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
+  },
+
+  // ========== LEVEL 6: PROTOCOLS ==========
+  {
+    id: 18,
+    title: 'Agent Communication Protocol (ACP)',
+    focus: 'Standardized Agent Communication',
+    learningObjective: 'Implement ACP for agent interoperability',
+    tool: 'ACP framework, message protocols',
+    description: 'Learn the Agent Communication Protocol that enables different agents and systems to communicate effectively, ensuring interoperability across diverse agent implementations.',
+    prerequisites: [14],
+    difficulty: 'Advanced',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 19,
+    title: 'Agent2Agent (A2A)',
+    focus: 'Direct Agent Communication',
+    learningObjective: 'Build A2A chat systems for agent-to-agent interaction',
+    tool: 'A2A protocol, chat systems',
+    description: 'Master the Agent2Agent protocol for enabling direct communication between agents, allowing them to exchange information, coordinate actions, and collaborate effectively.',
+    prerequisites: [18],
+    difficulty: 'Advanced',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 20,
+    title: 'Model Context Protocol (MCP)',
+    focus: 'Context Sharing Standards',
+    learningObjective: 'Implement MCP servers for context management',
+    tool: 'MCP servers, context protocols',
+    description: 'Understand the Model Context Protocol for sharing context and information between agents and systems, enabling richer interactions and better coordination.',
+    prerequisites: [18],
+    difficulty: 'Advanced',
+    estimatedTime: '30 min',
+  },
+
+  // ========== LEVEL 7: FRAMEWORKS ==========
+  {
+    id: 21,
+    title: 'LangChain',
+    focus: 'Agent Development Framework',
+    learningObjective: 'Build agents using LangChain framework',
+    tool: 'LangChain library, agent chains',
+    description: 'Learn to use LangChain, a popular framework for building agentic applications with LLMs, including chains, agents, and memory management.',
+    prerequisites: [11, 13],
+    difficulty: 'Intermediate',
+    estimatedTime: '35 min',
+  },
+  {
+    id: 22,
+    title: 'LangGraph',
+    focus: 'State Machine Agents',
+    learningObjective: 'Create stateful agent workflows with LangGraph',
+    tool: 'LangGraph, state machines, ReAct',
+    description: 'Master LangGraph for building complex, stateful agent workflows with cycles, conditional logic, and human-in-the-loop interactions.',
+    prerequisites: [15, 21],
     difficulty: 'Advanced',
     estimatedTime: '40 min',
   },
   {
-    id: 6,
-    title: 'Prompt Engineering',
-    focus: 'Command Design',
-    learningObjective: 'See how phrasing affects reasoning',
-    tool: 'Prompt block editing',
-    description: 'Master the art of crafting effective prompts that guide agent behavior and reasoning.',
-    prerequisites: [1],
-    difficulty: 'Beginner',
-    estimatedTime: '20 min',
+    id: 23,
+    title: 'AutoGen',
+    focus: 'Multi-Agent Conversations',
+    learningObjective: 'Build multi-agent systems with AutoGen',
+    tool: 'AutoGen framework, agent conversations',
+    description: 'Explore AutoGen for creating multi-agent applications where agents can have conversations, collaborate, and solve problems together autonomously.',
+    prerequisites: [14, 21],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
   },
   {
-    id: 7,
-    title: 'Failure & Debugging',
-    focus: 'Feedback loops',
-    learningObjective: 'Learn how agents recover and self-correct',
-    tool: 'Result-based scoring',
-    description: 'Explore how agents handle failures, debug issues, and implement self-correction mechanisms.',
-    prerequisites: [2, 4],
+    id: 24,
+    title: 'crewAI',
+    focus: 'Role-Based Agent Teams',
+    learningObjective: 'Organize agents into specialized teams with crewAI',
+    tool: 'crewAI framework, agent roles',
+    description: 'Learn crewAI for organizing agents into teams with specific roles, enabling complex workflows where agents collaborate on tasks like retail optimization and call analysis.',
+    prerequisites: [14, 21],
     difficulty: 'Advanced',
     estimatedTime: '35 min',
+  },
+  {
+    id: 25,
+    title: 'MetaGPT',
+    focus: 'Software Development Agents',
+    learningObjective: 'Use MetaGPT for automated software development',
+    tool: 'MetaGPT, PRD automation, code generation',
+    description: 'Discover MetaGPT for creating agents that can automate software development tasks, generate PRDs, and coordinate multiple agents for complex development workflows.',
+    prerequisites: [14, 21],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
+  },
+  {
+    id: 26,
+    title: 'ChatDev',
+    focus: 'Collaborative Development',
+    learningObjective: 'Build development teams with ChatDev ChatChain',
+    tool: 'ChatDev, ChatChain, collaborative coding',
+    description: 'Master ChatDev for creating agent teams that collaborate on software development projects, with agents taking on different roles in the development process.',
+    prerequisites: [25],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+
+  // ========== LEVEL 8: SPECIALIZED TOPICS ==========
+  {
+    id: 27,
+    title: 'Agentic RAG',
+    focus: 'Retrieval-Augmented Generation',
+    learningObjective: 'Implement RAG systems with agentic capabilities',
+    tool: 'RAG pipelines, vector databases',
+    description: 'Learn how to combine retrieval-augmented generation with agentic AI, enabling agents to access and use external knowledge bases effectively.',
+    prerequisites: [11, 21],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+  {
+    id: 28,
+    title: 'Agentic Chunking',
+    focus: 'Intelligent Document Processing',
+    learningObjective: 'Use agents to intelligently chunk documents for RAG',
+    tool: 'Chunking algorithms, semantic analysis',
+    description: 'Master agentic chunking techniques where agents intelligently break down documents based on semantic meaning rather than fixed sizes, improving RAG performance.',
+    prerequisites: [27],
+    difficulty: 'Advanced',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 29,
+    title: 'Corrective RAG',
+    focus: 'Self-Correcting Retrieval',
+    learningObjective: 'Build RAG systems that self-correct retrieval errors',
+    tool: 'Feedback loops, correction mechanisms',
+    description: 'Explore Corrective RAG, where agents can identify when retrieval fails and automatically correct queries or search strategies to improve results.',
+    prerequisites: [27, 28],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+  {
+    id: 30,
+    title: 'Human-in-the-Loop',
+    focus: 'Hybrid Human-AI Systems',
+    learningObjective: 'Design systems that integrate human oversight',
+    tool: 'Approval workflows, human feedback',
+    description: 'Learn to build agentic systems that incorporate human oversight, approval workflows, and feedback loops to ensure safety and quality in critical decisions.',
+    prerequisites: [13],
+    difficulty: 'Intermediate',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 31,
+    title: 'AI Agent Evaluation',
+    focus: 'Testing & Performance Metrics',
+    learningObjective: 'Evaluate agent performance and reliability',
+    tool: 'Evaluation frameworks, metrics',
+    description: 'Master techniques for evaluating agent performance, including accuracy metrics, reliability testing, and benchmarking agent capabilities across different tasks.',
+    prerequisites: [13],
+    difficulty: 'Intermediate',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 32,
+    title: 'AI Agent Security',
+    focus: 'Protection & Safeguards',
+    learningObjective: 'Implement security measures for agentic systems',
+    tool: 'Security protocols, threat detection',
+    description: 'Understand security risks in agentic AI systems and learn to implement safeguards, access controls, and protection mechanisms to prevent malicious use.',
+    prerequisites: [13, 30],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+  {
+    id: 33,
+    title: 'AI Agent Ethics',
+    focus: 'Responsible AI Development',
+    learningObjective: 'Design ethical and responsible agentic systems',
+    tool: 'Ethics frameworks, bias detection',
+    description: 'Explore ethical considerations in agentic AI, including bias mitigation, fairness, transparency, and ensuring agents align with human values and ethical principles.',
+    prerequisites: [30, 31],
+    difficulty: 'Advanced',
+    estimatedTime: '30 min',
+  },
+
+  // ========== LEVEL 9: USE CASES & APPLICATIONS ==========
+  {
+    id: 34,
+    title: 'Automation',
+    focus: 'Process Automation',
+    learningObjective: 'Automate business processes with agents',
+    tool: 'Workflow automation, task scheduling',
+    description: 'Learn to use agentic AI for automating repetitive business processes, reducing manual work, and improving efficiency across various organizational tasks.',
+    prerequisites: [13, 21],
+    difficulty: 'Intermediate',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 35,
+    title: 'Customer Service',
+    focus: 'AI-Powered Support',
+    learningObjective: 'Build customer service agents',
+    tool: 'Chatbots, support systems',
+    description: 'Discover how to create agentic systems for customer service that can handle inquiries, provide support, and escalate issues when needed.',
+    prerequisites: [10, 21],
+    difficulty: 'Intermediate',
+    estimatedTime: '30 min',
+  },
+  {
+    id: 36,
+    title: 'Finance & Trading',
+    focus: 'Financial Agent Systems',
+    learningObjective: 'Build agents for financial analysis and trading',
+    tool: 'Market data APIs, trading algorithms',
+    description: 'Explore agentic AI applications in finance, including trading bots that analyze market data, execute trades, and manage portfolios autonomously.',
+    prerequisites: [11, 13],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
+  },
+  {
+    id: 37,
+    title: 'Healthcare',
+    focus: 'Medical AI Agents',
+    learningObjective: 'Create agents for healthcare monitoring and support',
+    tool: 'Patient data systems, monitoring tools',
+    description: 'Learn to build agentic systems for healthcare that monitor patient data, adjust treatment recommendations, and provide real-time feedback to clinicians.',
+    prerequisites: [11, 30],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
+  },
+  {
+    id: 38,
+    title: 'Cybersecurity',
+    focus: 'Security Monitoring Agents',
+    learningObjective: 'Deploy agents for threat detection and response',
+    tool: 'Network monitoring, log analysis',
+    description: 'Master agentic AI for cybersecurity, including systems that continuously monitor network traffic, detect anomalies, and respond to security threats autonomously.',
+    prerequisites: [2, 11, 32],
+    difficulty: 'Advanced',
+    estimatedTime: '40 min',
+  },
+  {
+    id: 39,
+    title: 'Supply Chain Management',
+    focus: 'Logistics Optimization',
+    learningObjective: 'Optimize supply chains with agentic systems',
+    tool: 'Inventory systems, order management',
+    description: 'Explore how agentic AI can streamline supply chain management through process automation, inventory optimization, and autonomous order placement.',
+    prerequisites: [13, 34],
+    difficulty: 'Advanced',
+    estimatedTime: '35 min',
+  },
+];
+
+// Component definitions - Group lessons into roadmap components
+const COMPONENTS = [
+  {
+    id: 'foundations',
+    name: 'Foundations',
+    lessonIds: [1, 2, 3],
+    dependencies: [],
+  },
+  {
+    id: 'core-components',
+    name: 'Core Components',
+    lessonIds: [4, 5, 6, 7],
+    dependencies: ['foundations'],
+  },
+  {
+    id: 'advanced-components',
+    name: 'Advanced Components',
+    lessonIds: [8, 9, 10, 11],
+    dependencies: ['core-components'],
+  },
+  {
+    id: 'execution-orchestration',
+    name: 'Execution & Orchestration',
+    lessonIds: [12, 13, 14],
+    dependencies: ['advanced-components'],
+  },
+  {
+    id: 'advanced-architectures',
+    name: 'Advanced Architectures',
+    lessonIds: [15, 16, 17],
+    dependencies: ['execution-orchestration'],
+  },
+  {
+    id: 'protocols',
+    name: 'Protocols',
+    lessonIds: [18, 19, 20],
+    dependencies: ['execution-orchestration'],
+  },
+  {
+    id: 'frameworks',
+    name: 'Frameworks',
+    lessonIds: [21, 22, 23, 24, 25, 26],
+    dependencies: ['execution-orchestration'],
+  },
+  {
+    id: 'specialized-topics',
+    name: 'Specialized Topics',
+    lessonIds: [27, 28, 29, 30, 31, 32, 33],
+    dependencies: ['frameworks', 'execution-orchestration'],
   },
 ];
 
@@ -96,10 +517,9 @@ const getInitialProgress = () => {
 };
 
 export default function LessonsPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSection, setSelectedSection] = useState('all');
   const [progress, setProgress] = useState(getInitialProgress);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'roadmap'
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Save progress to localStorage
   const updateProgress = (lessonId, status) => {
@@ -110,151 +530,53 @@ export default function LessonsPage() {
     }
   };
 
-  // Filter lessons based on search and section
-  const filteredLessons = useMemo(() => {
-    let filtered = LESSONS;
+  // Open sidebar with selected component
+  const handleComponentSelect = (component) => {
+    setSelectedComponent(component);
+    setIsSidebarOpen(true);
+  };
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        lesson =>
-          lesson.title.toLowerCase().includes(query) ||
-          lesson.focus.toLowerCase().includes(query) ||
-          lesson.learningObjective.toLowerCase().includes(query) ||
-          lesson.tool.toLowerCase().includes(query) ||
-          lesson.description.toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by section
-    if (selectedSection !== 'all') {
-      filtered = filtered.filter(lesson => {
-        const status = progress[lesson.id] || 'not-started';
-        return status === selectedSection;
-      });
-    }
-
-    return filtered;
-  }, [searchQuery, selectedSection, progress]);
-
-  // Get progress statistics
-  const stats = useMemo(() => {
-    const total = LESSONS.length;
-    const completed = Object.values(progress).filter(s => s === 'completed').length;
-    const inProgress = Object.values(progress).filter(s => s === 'in-progress').length;
-    const notStarted = total - completed - inProgress;
-
-    return { total, completed, inProgress, notStarted };
-  }, [progress]);
-
-  // Get sections for filtering
-  const sections = [
-    { id: 'all', label: 'All Lessons', count: LESSONS.length },
-    { id: 'not-started', label: 'Not Started', count: stats.notStarted },
-    { id: 'in-progress', label: 'In Progress', count: stats.inProgress },
-    { id: 'completed', label: 'Completed', count: stats.completed },
-  ];
+  // Smoothly close sidebar, then clear content after transition
+  const handleCloseSidebar = () => {
+    setIsSidebarOpen(false);
+    setTimeout(() => setSelectedComponent(null), 300); // match CSS duration
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">Agentic AI Lessons</h1>
-              <p className="mt-2 text-lg text-gray-600">
-                Master the principles of agentic AI through interactive lessons
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setViewMode(viewMode === 'grid' ? 'roadmap' : 'grid')}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
-              >
-                {viewMode === 'grid' ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                    </svg>
-                    Roadmap View
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                    Grid View
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
-
-          {/* Progress Stats */}
-          <div className="mt-4 flex gap-4">
-            {sections.map(section => (
-              <button
-                key={section.id}
-                onClick={() => setSelectedSection(section.id)}
-                className={`px-4 py-2 rounded-lg transition ${
-                  selectedSection === section.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {section.label} ({section.count})
-              </button>
-            ))}
-          </div>
+    <div className="min-h-screen bg-[#1e1e1e] flex flex-row">
+      {/* Main Content - Roadmap */}
+      <div className="flex-1 relative">
+        <div className="h-screen bg-gradient-to-br from-[#1e1e1e] via-[#252526] to-[#1e1e1e] overflow-hidden">
+          <NeetCodeRoadmap
+            components={COMPONENTS}
+            lessons={LESSONS}
+            progress={progress}
+            onComponentSelect={handleComponentSelect}
+          />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {viewMode === 'roadmap' ? (
-          <LessonRoadmap lessons={LESSONS} progress={progress} onProgressUpdate={updateProgress} />
-        ) : (
-          <>
-            {filteredLessons.length === 0 ? (
-              <div className="text-center py-12">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No lessons found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Try adjusting your search or filter criteria
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredLessons.map(lesson => (
-                  <LessonCard
-                    key={lesson.id}
-                    lesson={lesson}
-                    progress={progress[lesson.id] || 'not-started'}
-                    onProgressUpdate={updateProgress}
-                    allLessons={LESSONS}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+      {/* Right Sidebar - Side-by-side with roadmap */}
+      <div
+        className="h-screen transition-[width] duration-300 ease-out overflow-hidden"
+        style={{ width: isSidebarOpen ? '600px' : '0px' }}
+      >
+        <div
+          className="h-full"
+          style={{
+            transform: isSidebarOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 300ms ease-out',
+            width: '600px',
+          }}
+        >
+          <ComponentDetailSidebar
+            component={selectedComponent}
+            lessons={LESSONS}
+            progress={progress}
+            onProgressUpdate={updateProgress}
+            onClose={handleCloseSidebar}
+          />
+        </div>
       </div>
     </div>
   );

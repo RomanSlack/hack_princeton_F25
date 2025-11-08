@@ -69,3 +69,62 @@ body {
   fill: #3b82f6;
 }
 
+/* React Flow dark theme customization */
+.react-flow {
+  background-color: #1e1e1e;
+}
+
+.react-flow__controls {
+  background-color: #252526;
+  border: 1px solid #3e3e42;
+}
+
+.react-flow__controls-button {
+  background-color: #252526;
+  color: #cccccc;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #2d2d30;
+}
+
+.react-flow__minimap {
+  background-color: #1e1e1e;
+  border: 1px solid #3e3e42;
+}
+
+.react-flow__node {
+  cursor: pointer;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__handle {
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  border: 2px solid #1e1e1e;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.react-flow__handle:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.2);
+}
+
+.react-flow__edge-path {
+  transition: all 0.3s ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3;
+}
+
+.react-flow__node.selected {
+  z-index: 10;
+}
+

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * LessonCard Component
@@ -8,11 +9,12 @@ import { useState } from 'react';
  */
 export default function LessonCard({ lesson, progress, onProgressUpdate, allLessons }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const router = useRouter();
 
   // Check if prerequisites are met
   const prerequisitesMet = lesson.prerequisites.every(prereqId => {
     const prereqProgress = allLessons.find(l => l.id === prereqId)?.id;
-    return prereqProgress && (progress[prereqId] === 'completed' || progress[prereqId] === 'in-progress');
+    return prereqProgress && (progress[prereqId] === 'completed');
   });
 
   // Get progress badge color
@@ -20,8 +22,6 @@ export default function LessonCard({ lesson, progress, onProgressUpdate, allLess
     switch (progress) {
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-300';
-      case 'in-progress':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -89,20 +89,14 @@ export default function LessonCard({ lesson, progress, onProgressUpdate, allLess
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
           )}
-          {progress === 'in-progress' && (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          )}
           <span className="text-xs font-semibold capitalize">
-            {progress === 'not-started' ? 'Not Started' : progress.replace('-', ' ')}
+            {progress === 'completed' ? 'Completed' : 'Not Started'}
           </span>
         </div>
 
         {/* Expandable Details */}
         {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-gray-200 animate-slide-down">
             <p className="text-sm text-gray-700 mb-3">{lesson.description}</p>
             
             {/* Prerequisites */}
@@ -150,12 +144,22 @@ export default function LessonCard({ lesson, progress, onProgressUpdate, allLess
           </button>
           {prerequisitesMet && (
             <div className="flex gap-1">
+              <button
+                onClick={() => router.push('/builder')}
+                className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-1"
+                title="Open Agent Builder"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+                Try It
+              </button>
               {progress !== 'completed' && (
                 <button
-                  onClick={() => handleProgressChange(progress === 'not-started' ? 'in-progress' : 'completed')}
+                  onClick={() => handleProgressChange('completed')}
                   className="px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                 >
-                  {progress === 'not-started' ? 'Start' : 'Complete'}
+                  Mark Complete
                 </button>
               )}
               {progress !== 'not-started' && (
