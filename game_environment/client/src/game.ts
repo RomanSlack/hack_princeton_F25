@@ -186,9 +186,9 @@ export class GameClient {
             this.isSpectator = true;
         }
 
-        // Find our player (only if not a spectator)
-        if (!this.isSpectator && this.playerId === null && packet.players.length > 0) {
-            this.playerId = packet.players[packet.players.length - 1].id;
+        // Get our player ID from server (only if not a spectator)
+        if (!this.isSpectator && packet.playerData?.playerId !== undefined) {
+            this.playerId = packet.playerData.playerId;
         }
 
         // Update players

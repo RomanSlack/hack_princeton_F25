@@ -197,6 +197,7 @@ export class Game {
                 const personalizedPacket = {
                     ...packet,
                     playerData: {
+                        playerId: player.id, // Tell client which entity is theirs
                         health: player.health,
                         ammo: Object.fromEntries(player.ammo),
                         weapons: [
