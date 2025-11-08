@@ -12,6 +12,7 @@ interface RenderObject {
     container: PIXI.Container;
     position: Vector;
     rotation: number;
+    nameText?: PIXI.Text;
 }
 
 export class GameClient {
@@ -170,6 +171,10 @@ export class GameClient {
             if (!currentPlayerIds.has(id)) {
                 this.app.stage.removeChild(obj.container);
                 obj.container.destroy();
+                if (obj.nameText) {
+                    this.app.stage.removeChild(obj.nameText);
+                    obj.nameText.destroy();
+                }
                 this.playerSprites.delete(id);
             }
         }
@@ -317,6 +322,14 @@ export class GameClient {
             obj.container.rotation = obj.rotation;
             obj.container.scale.set(this.camera.zoom);
 
+            // Position name text above player (in world coordinates, then convert to screen)
+            if (obj.nameText) {
+                const nameWorldPos = Vec.add(obj.position, Vec(0, -3.5));
+                const nameScreenPos = this.camera.worldToScreen(nameWorldPos);
+                obj.nameText.position.set(nameScreenPos.x, nameScreenPos.y);
+                obj.nameText.scale.set(this.camera.zoom);
+            }
+
             // Highlight our player
             if (id === this.playerId) {
                 obj.container.alpha = 1;
@@ -392,28 +405,30 @@ export class GameClient {
         const nameText = new PIXI.Text({
             text: playerData.username,
             style: {
-                fontSize: 16,
+                fontSize: 6,
                 fill: 0xffffff,
-                stroke: { color: 0x000000, width: 3 },
+                stroke: { color: 0x000000, width: 0.15 },
                 fontWeight: 'bold'
             }
         });
-        nameText.anchor.set(0.5, 0.5);
-        nameText.position.set(0, -60);
+        nameText.resolution = 4; // Higher resolution for crisp text at small sizes
+        nameText.anchor.set(0.5, 1); // Anchor at bottom center
 
         container.addChild(shadow);
         container.addChild(body);
         container.addChild(highlight);
         container.addChild(direction);
         container.addChild(weaponSprite);
-        container.addChild(nameText);
 
+        // Add nameText separately to stage so it doesn't rotate with player
         this.app.stage.addChild(container);
+        this.app.stage.addChild(nameText);
 
         return {
             container,
             position: Vec(playerData.x, playerData.y),
-            rotation: playerData.rotation
+            rotation: playerData.rotation,
+            nameText
         };
     }
 
