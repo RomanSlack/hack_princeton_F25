@@ -6,6 +6,8 @@ from enum import Enum
 from dedalus_labs import AsyncDedalus, DedalusRunner
 from dotenv import load_dotenv
 import logging
+import asyncio
+from game_client import GameEnvironmentClient
 
 load_dotenv()
 
@@ -189,9 +191,30 @@ app.add_middleware(
 # In-memory game state
 agents: Dict[str, AgentState] = {}
 
+# Game session state
+class GameSession:
+    """Tracks active game session"""
+    def __init__(self):
+        self.active = False
+        self.registered_agents: Dict[str, bool] = {}  # agent_id -> registered in game
+        self.step_count = 0
+        self.auto_stepping = False
+        self.step_delay = 1.0  # seconds between auto steps
+
+game_session = GameSession()
+
 # Initialize Dedalus client
 dedalus_client = AsyncDedalus()
 dedalus_runner = DedalusRunner(dedalus_client)
+
+# Initialize game environment client
+game_client = GameEnvironmentClient()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    await game_client.close()
 
 
 # Helper Functions
@@ -335,11 +358,16 @@ async def health_check():
 
 
 @app.post("/add-agent")
-async def add_agent(program: ProgramSchema):
+async def add_agent(program: ProgramSchema, register_in_game: bool = False, username: Optional[str] = None):
     """
-    Add a new agent to the game with its Scratch-like program.
+    Add a new agent to the backend with its Scratch-like program.
 
     The agent will start executing from the 'onStart' action block.
+
+    Args:
+        program: Agent program with blocks
+        register_in_game: If True, also register the agent in the game environment
+        username: Optional display name for the agent in the game
     """
     agent_id = program.agent_id
 
@@ -370,15 +398,318 @@ async def add_agent(program: ProgramSchema):
         current_node=on_start_block.next
     )
 
-    # Add agent to game state
+    # Add agent to backend state
     agents[agent_id] = agent_state
+
+    # Register in game environment if requested
+    game_registration = None
+    if register_in_game:
+        try:
+            game_registration = await game_client.register_agent(agent_id, username)
+            game_session.registered_agents[agent_id] = True
+            logger.info(f"Agent {agent_id} registered in game environment")
+        except Exception as e:
+            logger.error(f"Failed to register agent in game: {e}")
+            # Don't fail the whole request, just log the error
+            game_registration = {"error": str(e)}
 
     return {
         "success": True,
         "agent_id": agent_id,
         "current_node": agent_state.current_node,
-        "message": f"Agent '{agent_id}' added successfully"
+        "message": f"Agent '{agent_id}' added successfully",
+        "game_registration": game_registration
     }
+
+
+@app.post("/start-game-session")
+async def start_game_session():
+    """
+    Start a game session by registering all agents in the game environment.
+    This must be called before executing game steps.
+    """
+    if game_session.active:
+        raise HTTPException(
+            status_code=400,
+            detail="Game session already active"
+        )
+
+    if not agents:
+        raise HTTPException(
+            status_code=400,
+            detail="No agents to start. Add agents first using /add-agent"
+        )
+
+    logger.info(f"Starting game session with {len(agents)} agents")
+
+    # Register all agents that aren't already registered
+    registration_results = {}
+    for agent_id in agents.keys():
+        if agent_id not in game_session.registered_agents:
+            try:
+                result = await game_client.register_agent(agent_id, f"AI_{agent_id}")
+                game_session.registered_agents[agent_id] = True
+                registration_results[agent_id] = {
+                    "success": True,
+                    "position": result.get("position")
+                }
+                logger.info(f"Registered agent {agent_id} in game")
+            except Exception as e:
+                logger.error(f"Failed to register agent {agent_id}: {e}")
+                registration_results[agent_id] = {
+                    "success": False,
+                    "error": str(e)
+                }
+        else:
+            registration_results[agent_id] = {"success": True, "already_registered": True}
+
+    game_session.active = True
+    game_session.step_count = 0
+
+    return {
+        "success": True,
+        "session_active": True,
+        "agents_registered": len(game_session.registered_agents),
+        "registration_results": registration_results
+    }
+
+
+@app.post("/game-step")
+async def execute_game_step():
+    """
+    Execute one game step for all agents:
+    1. Get game state for each agent
+    2. Process each agent through their LLM
+    3. Send actions back to game environment
+    """
+    if not game_session.active:
+        raise HTTPException(
+            status_code=400,
+            detail="No active game session. Call /start-game-session first"
+        )
+
+    registered_agents = list(game_session.registered_agents.keys())
+    if not registered_agents:
+        raise HTTPException(
+            status_code=400,
+            detail="No agents registered in game"
+        )
+
+    logger.info(f"Executing game step {game_session.step_count + 1} for {len(registered_agents)} agents")
+
+    # Step 1: Get game states for all agents in parallel
+    game_states = await game_client.batch_get_states(registered_agents)
+    logger.info(f"Retrieved game states for {len(game_states)} agents")
+
+    # Step 2 & 3: Process each agent and send commands
+    step_results = {}
+    for agent_id in registered_agents:
+        if agent_id not in game_states:
+            logger.warning(f"No game state for agent {agent_id}, skipping")
+            step_results[agent_id] = {"error": "No game state available"}
+            continue
+
+        if agent_id not in agents:
+            logger.warning(f"Agent {agent_id} not in backend state, skipping")
+            step_results[agent_id] = {"error": "Agent not in backend"}
+            continue
+
+        try:
+            agent_state = agents[agent_id]
+            game_state_dict = game_states[agent_id]
+
+            # Convert to GameState model
+            game_state = GameState(**game_state_dict)
+
+            # Check if current node is an agent block
+            if not agent_state.current_node:
+                step_results[agent_id] = {"action": None, "reason": "No current node"}
+                continue
+
+            current_block = None
+            for block in agent_state.program.blocks:
+                if block.id == agent_state.current_node:
+                    current_block = block
+                    break
+
+            if not current_block or not isinstance(current_block, AgentBlock):
+                step_results[agent_id] = {"action": None, "reason": "Current node is not an agent block"}
+                continue
+
+            # Execute agent block
+            tool_choice, parameters = await execute_agent_block(
+                current_block,
+                game_state,
+                agent_state.program.blocks,
+                agent_state.current_plan
+            )
+
+            # Find the tool block
+            chosen_tool_block = None
+            for conn in current_block.tool_connections:
+                if conn.tool_name == tool_choice:
+                    for block in agent_state.program.blocks:
+                        if block.id == conn.tool_id:
+                            chosen_tool_block = block
+                            break
+                    break
+
+            if not chosen_tool_block:
+                logger.error(f"Tool block for {tool_choice} not found")
+                step_results[agent_id] = {"error": f"Tool block for {tool_choice} not found"}
+                continue
+
+            # Store plan if applicable
+            if tool_choice == "plan" and "plan" in parameters:
+                agent_state.current_plan = parameters["plan"]
+
+            # Update agent's current node
+            agent_state.current_node = chosen_tool_block.next
+
+            # Send command to game environment
+            command_result = await game_client.send_command(agent_id, tool_choice, parameters)
+
+            step_results[agent_id] = {
+                "action": tool_choice,
+                "parameters": parameters,
+                "next_node": agent_state.current_node,
+                "game_response": command_result.get("success", False)
+            }
+
+        except Exception as e:
+            logger.error(f"Error processing agent {agent_id}: {e}")
+            step_results[agent_id] = {"error": str(e)}
+
+    game_session.step_count += 1
+
+    return {
+        "success": True,
+        "step": game_session.step_count,
+        "agents_processed": len(step_results),
+        "results": step_results
+    }
+
+
+@app.post("/start-auto-stepping")
+async def start_auto_stepping(step_delay: float = 1.0):
+    """
+    Start automatic stepping at specified interval.
+
+    Args:
+        step_delay: Delay in seconds between steps (default: 1.0)
+    """
+    if not game_session.active:
+        raise HTTPException(
+            status_code=400,
+            detail="No active game session. Call /start-game-session first"
+        )
+
+    if game_session.auto_stepping:
+        raise HTTPException(
+            status_code=400,
+            detail="Auto-stepping already active"
+        )
+
+    game_session.auto_stepping = True
+    game_session.step_delay = step_delay
+
+    # Start background task
+    asyncio.create_task(auto_step_loop())
+
+    return {
+        "success": True,
+        "auto_stepping": True,
+        "step_delay": step_delay
+    }
+
+
+@app.post("/stop-auto-stepping")
+async def stop_auto_stepping():
+    """Stop automatic stepping"""
+    game_session.auto_stepping = False
+
+    return {
+        "success": True,
+        "auto_stepping": False,
+        "final_step": game_session.step_count
+    }
+
+
+@app.post("/stop-game-session")
+async def stop_game_session():
+    """
+    Stop the game session and clean up all agents from the game environment.
+    """
+    if not game_session.active:
+        raise HTTPException(
+            status_code=400,
+            detail="No active game session"
+        )
+
+    # Stop auto-stepping if active
+    game_session.auto_stepping = False
+
+    # Remove all agents from game environment
+    removal_results = {}
+    for agent_id in list(game_session.registered_agents.keys()):
+        try:
+            await game_client.remove_agent(agent_id)
+            removal_results[agent_id] = {"success": True}
+            logger.info(f"Removed agent {agent_id} from game")
+        except Exception as e:
+            logger.error(f"Failed to remove agent {agent_id}: {e}")
+            removal_results[agent_id] = {"success": False, "error": str(e)}
+
+    # Clear session state
+    game_session.registered_agents.clear()
+    game_session.active = False
+    final_step = game_session.step_count
+    game_session.step_count = 0
+
+    return {
+        "success": True,
+        "session_active": False,
+        "final_step": final_step,
+        "removal_results": removal_results
+    }
+
+
+@app.get("/game-session-status")
+async def get_game_session_status():
+    """Get current game session status"""
+    game_status = None
+    if game_session.active:
+        try:
+            game_status = await game_client.get_status()
+        except Exception as e:
+            logger.error(f"Failed to get game status: {e}")
+            game_status = {"error": str(e)}
+
+    return {
+        "session_active": game_session.active,
+        "auto_stepping": game_session.auto_stepping,
+        "step_count": game_session.step_count,
+        "step_delay": game_session.step_delay,
+        "agents_in_backend": len(agents),
+        "agents_in_game": len(game_session.registered_agents),
+        "game_server_status": game_status
+    }
+
+
+async def auto_step_loop():
+    """Background task for automatic stepping"""
+    logger.info("Auto-stepping started")
+    while game_session.auto_stepping and game_session.active:
+        try:
+            await execute_game_step()
+            logger.info(f"Auto-step {game_session.step_count} completed")
+        except Exception as e:
+            logger.error(f"Error in auto-step: {e}")
+            # Continue even if there's an error
+
+        await asyncio.sleep(game_session.step_delay)
+
+    logger.info("Auto-stepping stopped")
 
 
 @app.post("/next-step-for-agents")
@@ -495,7 +826,7 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
 
 def main():
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
 
 
 if __name__ == "__main__":

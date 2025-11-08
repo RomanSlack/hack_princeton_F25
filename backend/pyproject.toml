@@ -8,4 +8,5 @@ dependencies = [
     "dedalus-labs>=0.1.0a9",
     "fastapi[standard]>=0.121.0",
     "python-dotenv>=1.2.1",
+    "httpx>=0.28.1",
 ]

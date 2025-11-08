@@ -45,6 +45,7 @@ export interface PlayerData {
     activeWeapon: number;
     username: string;
     dead: boolean;
+    color: number;
 }
 
 export interface BulletData {

@@ -561,6 +561,6 @@ if __name__ == '__main__':
     print("🎮 AI Agent Control Panel Starting")
     print("="*60)
     print(f"Game Server: {GAME_SERVER}")
-    print(f"Control Panel: http://localhost:5000")
+    print(f"Control Panel: http://localhost:5001")
     print("="*60 + "\n")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

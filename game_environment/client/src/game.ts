@@ -365,8 +365,10 @@ export class GameClient {
         // Body (circle with gradient effect)
         const body = new PIXI.Graphics();
         body.circle(0, 0, 2.25);
-        body.fill({ color: playerData.dead ? 0x666666 : 0x3b7dd6 });
-        body.stroke({ color: playerData.dead ? 0x444444 : 0x2563b8, width: 0.25 });
+        body.fill({ color: playerData.dead ? 0x666666 : playerData.color });
+        // Darken the stroke color (multiply RGB values by ~0.7)
+        const strokeColor = playerData.dead ? 0x444444 : this.darkenColor(playerData.color, 0.7);
+        body.stroke({ color: strokeColor, width: 0.25 });
 
         // Highlight on body for 3D effect
         const highlight = new PIXI.Graphics();
@@ -603,5 +605,12 @@ export class GameClient {
 
         // Add to bottom layer (will be positioned in render loop)
         this.app.stage.addChildAt(this.grassBackground, 0);
+    }
+
+    private darkenColor(color: number, factor: number): number {
+        const r = ((color >> 16) & 0xFF) * factor;
+        const g = ((color >> 8) & 0xFF) * factor;
+        const b = (color & 0xFF) * factor;
+        return (Math.floor(r) << 16) | (Math.floor(g) << 8) | Math.floor(b);
     }
 }

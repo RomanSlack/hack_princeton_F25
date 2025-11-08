@@ -16,6 +16,7 @@ export class Player extends GameObject {
     health: number;
     maxHealth: number;
     speed: number;
+    color: number;
 
     weapons: [Gun | null, Gun | null] = [null, null];
     activeWeaponIndex: 0 | 1 = 0;
@@ -31,7 +32,7 @@ export class Player extends GameObject {
     moving: boolean = false;
     attacking: boolean = false;
 
-    constructor(id: number, socket: ServerWebSocket<{ playerId: number }>, username: string, position: Vector) {
+    constructor(id: number, socket: ServerWebSocket<{ playerId: number }>, username: string, position: Vector, color: number) {
         super(id, position);
 
         this.username = username;
@@ -39,6 +40,7 @@ export class Player extends GameObject {
         this.health = GameConstants.PLAYER_MAX_HEALTH;
         this.maxHealth = GameConstants.PLAYER_MAX_HEALTH;
         this.speed = GameConstants.PLAYER_SPEED;
+        this.color = color;
 
         this.hitbox = new CircleHitbox(GameConstants.PLAYER_RADIUS, Vec.clone(position));
     }
@@ -218,7 +220,8 @@ export class Player extends GameObject {
             health: this.health,
             activeWeapon: this.activeWeaponIndex,
             username: this.username,
-            dead: this.dead
+            dead: this.dead,
+            color: this.color
         };
     }
 }

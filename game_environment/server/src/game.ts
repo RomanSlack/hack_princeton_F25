@@ -40,6 +40,31 @@ export class Game {
     private currentTick = 0;
 
     private usedSpawnPoints = new Set<number>();
+    private usedColors = new Set<number>();
+
+    // Pre-defined vibrant colors for players
+    private playerColors: number[] = [
+        0xFF4444, // Red
+        0x44FF44, // Green
+        0x4444FF, // Blue
+        0xFFFF44, // Yellow
+        0xFF44FF, // Magenta
+        0x44FFFF, // Cyan
+        0xFF8844, // Orange
+        0xFF4488, // Pink
+        0x88FF44, // Lime
+        0x4488FF, // Sky Blue
+        0x8844FF, // Purple
+        0xFF8888, // Light Red
+        0x88FF88, // Light Green
+        0x8888FF, // Light Blue
+        0xFFAA44, // Amber
+        0xAA44FF, // Violet
+        0x44FFAA, // Mint
+        0xFFAA88, // Peach
+        0xAAFF88, // Pale Green
+        0x88AAFF, // Periwinkle
+    ];
 
     constructor() {
         this.grid = new Grid(GameConstants.MAP_WIDTH, GameConstants.MAP_HEIGHT);
@@ -181,7 +206,8 @@ export class Game {
 
     addPlayer(socket: ServerWebSocket<{ playerId: number }>, username: string): Player {
         const spawnPoint = this.getRandomSpawnPoint();
-        const player = new Player(this.nextPlayerId++, socket, username, spawnPoint);
+        const color = this.getUniqueColor();
+        const player = new Player(this.nextPlayerId++, socket, username, spawnPoint, color);
 
         // Give starter pistol
         player.addWeapon("pistol");
@@ -190,7 +216,7 @@ export class Game {
         this.players.set(player.id, player);
         this.grid.addObject(player);
 
-        console.log(`[Game] Player ${username} (${player.id}) joined at (${spawnPoint.x}, ${spawnPoint.y})`);
+        console.log(`[Game] Player ${username} (${player.id}) joined at (${spawnPoint.x}, ${spawnPoint.y}) with color 0x${color.toString(16)}`);
 
         return player;
     }
@@ -212,7 +238,8 @@ export class Game {
 
         const spawnPoint = this.getRandomSpawnPoint();
         const displayName = username || `AI_${agentId}`;
-        const agent = new AIAgent(this.nextAIAgentId++, agentId, displayName, spawnPoint);
+        const color = this.getUniqueColor();
+        const agent = new AIAgent(this.nextAIAgentId++, agentId, displayName, spawnPoint, color);
 
         // Give starter pistol
         agent.addWeapon("pistol");
@@ -221,7 +248,7 @@ export class Game {
         this.aiAgents.set(agentId, agent);
         this.grid.addObject(agent);
 
-        console.log(`[Game] AI Agent ${displayName} (${agentId}) joined at (${spawnPoint.x}, ${spawnPoint.y})`);
+        console.log(`[Game] AI Agent ${displayName} (${agentId}) joined at (${spawnPoint.x}, ${spawnPoint.y}) with color 0x${color.toString(16)}`);
 
         return agent;
     }
@@ -230,6 +257,7 @@ export class Game {
         const player = this.players.get(playerId);
         if (player) {
             this.grid.removeObject(player);
+            this.usedColors.delete(player.color); // Release the color
             this.players.delete(playerId);
             console.log(`[Game] Player ${player.username} (${playerId}) left`);
         }
@@ -247,6 +275,7 @@ export class Game {
         const agent = this.aiAgents.get(agentId);
         if (agent) {
             this.grid.removeObject(agent);
+            this.usedColors.delete(agent.color); // Release the color
             this.aiAgents.delete(agentId);
             this.agentBridge.removeAgentState(agentId);
             console.log(`[Game] AI Agent ${agent.username} (${agentId}) left`);
@@ -290,6 +319,26 @@ export class Game {
                 }
             }
         }
+    }
+
+    private getUniqueColor(): number {
+        // If all colors are used, reset and allow duplicates
+        if (this.usedColors.size >= this.playerColors.length) {
+            this.usedColors.clear();
+        }
+
+        // Find an unused color
+        for (const color of this.playerColors) {
+            if (!this.usedColors.has(color)) {
+                this.usedColors.add(color);
+                return color;
+            }
+        }
+
+        // Fallback: generate a random color
+        const randomColor = Math.floor(Math.random() * 0xFFFFFF);
+        this.usedColors.add(randomColor);
+        return randomColor;
     }
 
     private getRandomSpawnPoint(): Vector {
