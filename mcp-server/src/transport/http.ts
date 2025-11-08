@@ -83,19 +83,19 @@ async function createNewSession(
     res: ServerResponse,
     config: Config
 ): Promise<void> {
-    const serverInstance = createStandaloneServer(config.apiKey);
+    const serverInstance = createStandaloneServer();
     const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (sessionId) => {
             sessions.set(sessionId, { transport, server: serverInstance });
-            console.log('New Ticketmaster session created:', sessionId);
+            console.log('New AI Planning session created:', sessionId);
         }
     });
 
     transport.onclose = () => {
         if (transport.sessionId) {
             sessions.delete(transport.sessionId);
-            console.log('Ticketmaster session closed:', transport.sessionId);
+            console.log('AI Planning session closed:', transport.sessionId);
         }
     };
 
@@ -138,17 +138,17 @@ function handleNotFound(res: ServerResponse): void {
  * @private
  */
 function logServerStart(config: Config): void {
-    const displayUrl = config.isProduction 
-        ? `Port ${config.port}` 
+    const displayUrl = config.isProduction
+        ? `Port ${config.port}`
         : `http://localhost:${config.port}`;
-    
-    console.log(`Ticketmaster MCP Server listening on ${displayUrl}`);
+
+    console.log(`AI Planning MCP Server listening on ${displayUrl}`);
 
     if (!config.isProduction) {
         console.log('Put this in your client config:');
         console.log(JSON.stringify({
             "mcpServers": {
-                "ticketmaster": {
+                "ai-planning": {
                     "url": `http://localhost:${config.port}/mcp`
                 }
             }

@@ -5,26 +5,22 @@ import {
     ListToolsRequestSchema,
     McpError,
 } from '@modelcontextprotocol/sdk/types.js';
-import { TicketmasterClient } from './client.js';
-import { searchToolDefinition, handleSearchTool } from './tools/index.js';
+import { planToolDefinition, handlePlanTool } from './tools/index.js';
 
 /**
- * Main server class for Ticketmaster MCP integration
- * @class TicketmasterServer
+ * Main server class for AI Planning MCP integration
+ * @class PlanningServer
  */
-export class TicketmasterServer {
-    private client: TicketmasterClient;
+export class PlanningServer {
     private server: Server;
 
     /**
-     * Creates a new TicketmasterServer instance
-     * @param {string} apiKey - Ticketmaster API key for authentication
+     * Creates a new PlanningServer instance
      */
-    constructor(apiKey: string) {
-        this.client = new TicketmasterClient(apiKey);
+    constructor() {
         this.server = new Server(
             {
-                name: 'ticketmaster',
+                name: 'ai-planning',
                 version: '0.1.0',
             },
             {
@@ -45,19 +41,19 @@ export class TicketmasterServer {
     private setupHandlers(): void {
         // List available tools
         this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-            tools: [searchToolDefinition],
+            tools: [planToolDefinition],
         }));
 
         // Handle tool calls
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-            if (request.params.name !== 'search_ticketmaster') {
+            if (request.params.name !== 'plan') {
                 throw new McpError(
                     ErrorCode.MethodNotFound,
                     `Unknown tool: ${request.params.name}`
                 );
             }
 
-            return handleSearchTool(this.client, request.params.arguments);
+            return handlePlanTool(request.params.arguments);
         });
     }
 
@@ -86,13 +82,12 @@ export class TicketmasterServer {
 /**
  * Factory function for creating standalone server instances
  * Used by HTTP transport for session-based connections
- * @param {string} apiKey - Ticketmaster API key for authentication
  * @returns {Server} Configured MCP server instance
  */
-export function createStandaloneServer(apiKey: string): Server {
+export function createStandaloneServer(): Server {
     const server = new Server(
         {
-            name: "ticketmaster-discovery",
+            name: "ai-planning",
             version: "0.1.0",
         },
         {
@@ -102,22 +97,20 @@ export function createStandaloneServer(apiKey: string): Server {
         },
     );
 
-    const client = new TicketmasterClient(apiKey);
-
     // Set up handlers
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
-        tools: [searchToolDefinition],
+        tools: [planToolDefinition],
     }));
 
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
-        if (request.params.name !== 'search_ticketmaster') {
+        if (request.params.name !== 'plan') {
             throw new McpError(
                 ErrorCode.MethodNotFound,
                 `Unknown tool: ${request.params.name}`
             );
         }
 
-        return handleSearchTool(client, request.params.arguments);
+        return handlePlanTool(request.params.arguments);
     });
 
     return server;

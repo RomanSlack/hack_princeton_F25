@@ -1,1 +1,1 @@
-export { searchToolDefinition, handleSearchTool } from './search.js';
+export { planToolDefinition, handlePlanTool } from './plan.js';

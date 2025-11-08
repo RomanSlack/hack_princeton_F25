@@ -268,11 +268,12 @@ async def execute_agent_block(
     full_input = agent_block.system_prompt + "\n\n" + user_input
     logger.info(f"LLM Input:\n{full_input}")
 
-    # Call Dedalus
+    # Call Dedalus with MCP server access
     logger.info(f"Calling LLM with model: {agent_block.model}")
     response = await dedalus_runner.run(
         input=full_input, # TODO: remove this once we figure out how to pass the system prompt
         model=agent_block.model,
+        mcp_servers=["http://localhost:3001/mcp"],
         #system=agent_block.system_prompt # TODO: how do I pass system messages in Dedalus??
     )
 

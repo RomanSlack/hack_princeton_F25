@@ -1,11 +1,11 @@
 {
-  "name": "@windsornguyen/ticketmaster-mcp",
+  "name": "ai-planning-mcp",
   "version": "0.1.0",
-  "description": "A Model Context Protocol server for discovering events, venues, and attractions through the Ticketmaster Discovery API",
+  "description": "A Model Context Protocol server for AI-powered planning using Grok-4",
   "private": false,
   "type": "module",
   "bin": {
-    "ticketmaster-mcp": "./dist/index.js"
+    "ai-planning-mcp": "./dist/index.js"
   },
   "files": [
     "dist"
@@ -14,39 +14,29 @@
     "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
     "start": "node dist/index.js --port 3001",
     "dev:stdio": "tsx src/index.ts",
-    "dev:shttp": "tsx src/index.ts --port 3001",
+    "dev:http": "tsx src/index.ts --port 3001",
     "prepare": "bun run build",
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/windsornguyen/ticketmaster-mcp.git"
-  },
   "keywords": [
     "mcp",
-    "ticketmaster",
-    "events",
-    "venues",
-    "attractions",
-    "discovery-api"
+    "ai",
+    "planning",
+    "grok",
+    "xai"
   ],
-  "author": {
-    "name": "Windsor Nguyen",
-    "url": "https://windsornguyen.com"
-  },
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/windsornguyen/ticketmaster-mcp/issues"
-  },
-  "homepage": "https://github.com/windsornguyen/ticketmaster-mcp#readme",
   "dependencies": {
+    "@ai-sdk/xai": "^2.0.31",
     "@modelcontextprotocol/sdk": "1.16.0",
     "@playwright/test": "^1.54.2",
+    "ai": "^5.0.89",
     "axios": "^1.11.0",
     "dotenv": "^17.2.1"
   },
   "devDependencies": {
+    "@types/json-schema": "^7.0.15",
     "@types/node": "^24.2.0",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2"
