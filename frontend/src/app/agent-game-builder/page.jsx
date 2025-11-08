@@ -182,16 +182,16 @@ export default function AgentGameBuilder() {
 
   return (
     <div
-      className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100"
+      className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {/* Left Column - Game Preview & Run Button (1/5 width) */}
-      <div className="w-1/5 flex flex-col bg-white border-r border-slate-200 shadow-lg">
+      {/* Left Column - Game Preview & Run Button (2/5 width) */}
+      <div className="w-2/5 flex flex-col bg-white border-r border-slate-200 shadow-lg overflow-hidden">
         {/* Top Half - Game Iframe */}
-        <div className="flex-1 p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Game Preview</h3>
+        <div className="flex-1 p-3 flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-1.5 flex-shrink-0">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Game Preview</h3>
             <a
               href="http://localhost:3000"
               target="_blank"
@@ -202,7 +202,7 @@ export default function AgentGameBuilder() {
               ↗
             </a>
           </div>
-          <div className="flex-1 relative bg-slate-900 rounded-lg border-2 border-slate-300 overflow-hidden shadow-inner">
+          <div className="flex-1 relative bg-slate-900 rounded-lg border-2 border-slate-300 overflow-hidden shadow-inner min-h-0">
             <iframe
               src="http://localhost:3000"
               className="w-full h-full border-0"
@@ -213,33 +213,32 @@ export default function AgentGameBuilder() {
         </div>
 
         {/* Bottom Half - Run Button */}
-        <div className="p-6 border-t border-slate-200">
+        <div className="p-3 border-t border-slate-200 flex-shrink-0">
           <button
             onClick={handleRun}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            RUN AGENT
+            <span className="text-sm">RUN AGENT</span>
           </button>
 
-          <div className="mt-4 text-xs text-slate-500 text-center">
-            <p className="font-semibold mb-1">Blocks: {blocks.length}</p>
-            <p>Connections: {connections.length}</p>
+          <div className="mt-2 text-xs text-slate-500 text-center">
+            <p className="font-semibold">Blocks: {blocks.length} | Connections: {connections.length}</p>
           </div>
         </div>
       </div>
 
-      {/* Right Side - Instructions & Builder Area (4/5 width) */}
-      <div className="flex-1 flex flex-col">
+      {/* Right Side - Instructions & Builder Area (3/5 width) */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top - Instructions Section */}
-        <div className="bg-white border-b border-slate-200 shadow-sm">
-          <div className="px-8 py-4 flex items-center justify-between">
+        <div className="bg-white border-b border-slate-200 shadow-sm flex-shrink-0">
+          <div className="px-6 py-2.5 flex items-center justify-between gap-3">
             <button
               onClick={prevInstruction}
-              className="p-2 rounded-full hover:bg-slate-100 transition"
+              className="p-1.5 rounded-full hover:bg-slate-100 transition flex-shrink-0"
               title="Previous"
             >
               <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,8 +246,8 @@ export default function AgentGameBuilder() {
               </svg>
             </button>
 
-            <div className="flex-1 mx-8 text-center">
-              <h2 className="text-lg font-bold text-slate-800 mb-1">
+            <div className="flex-1 text-center min-w-0">
+              <h2 className="text-base font-bold text-slate-800">
                 {INSTRUCTIONS[currentInstruction].title}
               </h2>
               <p className="text-sm text-slate-600">
@@ -258,7 +257,7 @@ export default function AgentGameBuilder() {
 
             <button
               onClick={nextInstruction}
-              className="p-2 rounded-full hover:bg-slate-100 transition"
+              className="p-1.5 rounded-full hover:bg-slate-100 transition flex-shrink-0"
               title="Next"
             >
               <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,13 +267,13 @@ export default function AgentGameBuilder() {
           </div>
 
           {/* Progress dots */}
-          <div className="flex justify-center gap-2 pb-3">
+          <div className="flex justify-center gap-2 pb-2">
             {INSTRUCTIONS.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentInstruction(idx)}
                 className={`w-2 h-2 rounded-full transition ${
-                  idx === currentInstruction ? 'bg-blue-600 w-6' : 'bg-slate-300 hover:bg-slate-400'
+                  idx === currentInstruction ? 'bg-blue-600 w-5' : 'bg-slate-300 hover:bg-slate-400'
                 }`}
               />
             ))}
@@ -282,16 +281,16 @@ export default function AgentGameBuilder() {
         </div>
 
         {/* Bottom - Builder Container */}
-        <div className="flex-1 flex relative">
+        <div className="flex-1 flex relative min-h-0 overflow-hidden">
           {/* Sidebar - Blocks Palette */}
-          <div className="w-56 bg-white border-r border-slate-200 shadow-md p-4">
-            <h2 className="font-bold text-slate-800 mb-4 uppercase text-sm tracking-wide">Agent Blocks</h2>
-            <div className="space-y-3">
+          <div className="w-44 bg-white border-r border-slate-200 shadow-md p-3 overflow-y-auto flex-shrink-0">
+            <h2 className="font-bold text-slate-800 mb-3 uppercase text-xs tracking-wide">Agent Blocks</h2>
+            <div className="space-y-2">
               {BLOCK_TYPES.map(blockType => (
                 <div
                   key={blockType.id}
                   onMouseDown={(e) => handlePaletteMouseDown(e, blockType)}
-                  className="w-full text-white font-semibold py-3 px-4 rounded-lg shadow-md cursor-grab hover:shadow-lg active:cursor-grabbing select-none transition-all transform hover:scale-105"
+                  className="w-full text-white font-semibold py-2 px-3 rounded-lg shadow-md cursor-grab hover:shadow-lg active:cursor-grabbing select-none transition-all transform hover:scale-105 text-sm"
                   style={{ backgroundColor: blockType.color }}
                   title={blockType.description}
                 >
@@ -300,10 +299,10 @@ export default function AgentGameBuilder() {
               ))}
             </div>
 
-            <div className="mt-6 pt-6 border-t border-slate-200 text-xs text-slate-600">
+            <div className="mt-4 pt-4 border-t border-slate-200 text-xs text-slate-600">
               <p className="font-bold mb-2 uppercase tracking-wide">How to Use</p>
-              <ul className="space-y-1.5 leading-relaxed">
-                <li>• Drag blocks to canvas</li>
+              <ul className="space-y-1 leading-relaxed">
+                <li>• Drag to canvas</li>
                 <li>• Right-click to connect</li>
                 <li>• Double-click to delete</li>
                 <li>• Click Run when ready</li>
