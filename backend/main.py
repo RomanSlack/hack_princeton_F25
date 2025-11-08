@@ -430,8 +430,6 @@ def game_state_to_llm_format(game_state: GameState) -> str:
             weapon_info += f" ({ws.get('active_weapon_ammo', 0)}/{ws.get('active_weapon_capacity', 0)} ammo)"
             if ws.get('is_reloading'):
                 weapon_info += " [RELOADING]"
-            elif not ws.get('can_shoot'):
-                weapon_info += " [COOLDOWN]"
         parts.append(weapon_info)
 
     # Add ammo reserves
@@ -452,6 +450,15 @@ def game_state_to_llm_format(game_state: GameState) -> str:
 
     if game_state.nearby_agents:
         parts.append(f"Nearby agents: {len(game_state.nearby_agents)}")
+
+    # Add nearby loot summary
+    if hasattr(game_state, 'nearby_loot') and game_state.nearby_loot:
+        loot_count = len(game_state.nearby_loot)
+        closest_loot = game_state.nearby_loot[0] if game_state.nearby_loot else None
+        if closest_loot:
+            parts.append(f"Nearby loot: {loot_count} items (closest: {closest_loot.get('type')} at {closest_loot.get('distance', 0):.1f} units)")
+        else:
+            parts.append(f"Nearby loot: {loot_count} items")
 
     if not parts:
         return "No specific game state information available."
@@ -527,17 +534,34 @@ async def execute_agent_block(
     has_search_tool = "search" in available_tools
     has_mcp_tools = has_plan_tool or has_search_tool
 
+    # Build loot context if collect tool is available
+    loot_context = ""
+    if "collect" in available_tools:
+        nearby_loot = game_state.nearby_loot if hasattr(game_state, 'nearby_loot') and game_state.nearby_loot else []
+        if nearby_loot:
+            loot_context = "\n*** NEARBY LOOT (items you can collect) ***\n"
+            for loot in nearby_loot[:10]:  # Show top 10 nearest
+                loot_type = loot.get('type')
+                distance = loot.get('distance', 0)
+                pos = loot.get('position', {})
+                loot_context += f"- {loot_type} at distance {distance:.1f} units (position: x={pos.get('x', 0):.1f}, y={pos.get('y', 0):.1f})\n"
+            loot_context += "\nIMPORTANT: You must be within 15 units to collect. If distance > 15, MOVE toward the loot first!\n"
+            loot_context += "Calculate movement: If loot is at (x=100, y=200) and you're at (x=80, y=180), move by (x=20, y=20)\n"
+        else:
+            loot_context = "\n*** NO NEARBY LOOT - Move around to find items ***\n"
+
     # Build attack-specific context if attack tool is available
     attack_context = ""
     if "attack" in available_tools:
         nearby_agents = game_state.nearby_agents if hasattr(game_state, 'nearby_agents') and game_state.nearby_agents else []
         if nearby_agents:
-            attack_context = "\nNEARBY AGENTS YOU CAN ATTACK:\n"
+            attack_context = "\n*** NEARBY AGENTS YOU CAN ATTACK ***\n"
             for agent in nearby_agents[:5]:  # Show top 5 nearest
-                attack_context += f"- {agent.get('id')} at distance {agent.get('distance', 0):.1f} (health: {agent.get('health', 0)})\n"
-            attack_context += "\nTo attack, use their ID as target_player_id. Your weapon will auto-aim and shoot.\n"
+                agent_id = agent.get('id')
+                attack_context += f"ID: '{agent_id}' | distance: {agent.get('distance', 0):.1f} | health: {agent.get('health', 0)} | username: {agent.get('username', 'unknown')}\n"
+            attack_context += f"\nIMPORTANT: Use the exact ID from above (e.g., '{nearby_agents[0].get('id')}') in target_player_id parameter.\n"
         else:
-            attack_context = "\nNo nearby agents to attack.\n"
+            attack_context = "\n*** NO NEARBY AGENTS - Cannot attack ***\n"
 
     # Construct the input prompt with ammo management context
     user_input = (
@@ -545,6 +569,7 @@ async def execute_agent_block(
         f"Current game state: {game_state_str}\n"
         f"{past_actions_str}\n"
         f"Available actions:\n" + "\n".join(f"- {info}" for info in available_tools_info) + "\n"
+        f"{loot_context}\n"
         f"{attack_context}\n"
         f"IMPORTANT RULES:\n"
         f"MOVEMENT:\n"
@@ -555,15 +580,16 @@ async def execute_agent_block(
         f"- X-axis: NEGATIVE x moves LEFT (toward x=8), POSITIVE x moves RIGHT (toward x=504)\n"
         f"ATTACK & AMMO MANAGEMENT:\n"
         f"- Attack tool will auto-aim at the target and shoot your equipped weapon\n"
+        f"- NO COOLDOWN on guns - you can attack every game tick if you have ammo\n"
         f"- Attacking happens BEFORE movement in the game tick\n"
         f"- AMMO IS LIMITED - conserve it! You start with only 15 rounds (1 magazine)\n"
         f"- Check your weapon_state to see current ammo before attacking\n"
-        f"- If weapon shows [RELOADING] or [COOLDOWN], you CANNOT attack\n"
-        f"- Weapons have fire delays: pistol=250ms, rifle=200ms, shotgun=1200ms\n"
-        f"- Look for ammo loot (ammo_9mm, ammo_556mm, ammo_12g) on the ground when low\n"
-        f"- Use 'collect' action to pick up nearby ammo and items\n"
+        f"- If weapon shows [RELOADING], you CANNOT attack (wait for reload to finish)\n"
+        f"- Ammo is SCARCE on the map - look for ammo loot in nearby_loot list\n"
+        f"- Ammo types: ammo_9mm (pistol), ammo_556mm (rifle), ammo_12g (shotgun)\n"
+        f"- Use 'collect' action when near ammo/items to pick them up (no parameters needed)\n"
         f"- Combat is less deadly now - focus on survival and resource gathering\n"
-        f"- Choose a target from the nearby agents list above\n\n"
+        f"- Choose targets wisely from the nearby agents list above\n\n"
         f"Respond with nothing but a JSON object containing 'reasoning' (a brief 1-sentence explanation), 'action' (the action name), and 'parameters' (an object with the required parameters).\n"
         f"Examples:\n"
         f"- Move: {{\"reasoning\": \"Moving toward center\", \"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -10}}}}\n"

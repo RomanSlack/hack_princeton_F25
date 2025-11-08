@@ -132,25 +132,11 @@ export class AgentBridge {
     }
 
     /**
-     * Apply attack command - aims at target player and shoots (limited to 2 shots)
+     * Apply attack command - aims at target player and shoots
      */
     private applyAttackCommand(input: InputPacket, action: BackendAction, agent: AIAgent, state: CommandState): void {
         const targetId = action.parameters.target_player_id;
         if (!targetId) return;
-
-        const now = Date.now();
-
-        // Check if this is a new attack action (different target or timed out after 3 seconds)
-        const isNewAttack = state.attackTarget !== targetId || (now - state.attackStartTime) > 3000;
-
-        if (isNewAttack) {
-            // Reset for new attack
-            state.attackShotsFired = 0;
-            state.attackStartTime = now;
-            state.attackTarget = targetId;
-            state.lastShotTime = 0;
-            console.log(`[AgentBridge] Agent ${agent.username} starting new attack on ${targetId}`);
-        }
 
         // Find target (check both players and AI agents)
         let targetPosition: Vector | null = null;
@@ -174,36 +160,10 @@ export class AgentBridge {
         }
 
         if (targetPosition) {
-            // Always aim at target
+            // Aim at target and attack
             input.mouse = targetPosition;
-
-            // Check if we've already fired 2 shots
-            if (state.attackShotsFired >= 2) {
-                input.attacking = false;
-                return;
-            }
-
-            // Get weapon info
-            const activeWeapon = agent.weapons[agent.activeWeaponIndex];
-            if (!activeWeapon) {
-                input.attacking = false;
-                return;
-            }
-
-            // Only allow shooting if enough time has passed since last shot (minimum 200ms between shots)
-            const timeSinceLastShot = now - state.lastShotTime;
-            const canShootNow = activeWeapon.canShoot(now) && timeSinceLastShot >= 200;
-
-            if (canShootNow) {
-                // Fire a shot
-                input.attacking = true;
-                state.lastShotTime = now;
-                state.attackShotsFired++;
-                console.log(`[AgentBridge] Agent ${agent.username} fired shot ${state.attackShotsFired}/2 at ${targetId}`);
-            } else {
-                // Weapon on cooldown or too soon after last shot
-                input.attacking = false;
-            }
+            input.attacking = true;
+            console.log(`[AgentBridge] Agent ${agent.username} attacking ${targetId}`);
         } else {
             console.warn(`[AgentBridge] Target not found: ${targetId}`);
             input.attacking = false;
@@ -332,10 +292,7 @@ export class AgentBridge {
                 lastAction: null,
                 moveTarget: null,
                 attackTarget: null,
-                currentPlan: null,
-                attackShotsFired: 0,
-                attackStartTime: 0,
-                lastShotTime: 0
+                currentPlan: null
             };
             this.commandStates.set(agentId, state);
         }
@@ -356,7 +313,4 @@ interface CommandState {
     moveTarget: Vector | null;
     attackTarget: string | null;
     currentPlan: string | null;
-    attackShotsFired: number; // Track shots fired in current attack
-    attackStartTime: number; // When attack started
-    lastShotTime: number; // When last shot was fired
 }

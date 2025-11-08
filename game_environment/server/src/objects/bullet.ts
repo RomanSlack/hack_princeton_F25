@@ -3,6 +3,7 @@ import { RectangleHitbox } from "../../../common/src/utils/hitbox";
 import type { GunDefinition } from "../../../common/src/definitions/guns";
 import type { Game } from "../game";
 import { Obstacle } from "./obstacle";
+import { Loot } from "./loot";
 import type { BulletData } from "../../../common/src/packets";
 import type { GameObject } from "./gameObject";
 
@@ -61,6 +62,9 @@ export class Bullet {
         for (const obj of nearbyObjects) {
             // Skip shooter
             if (obj === this.shooter) continue;
+
+            // Skip loot items (bullets pass through items, XP orbs, ammo, weapons)
+            if (obj instanceof Loot) continue;
 
             // Check line-hitbox intersection
             const intersection = obj.hitbox.intersectsLine(this.position, newPosition);

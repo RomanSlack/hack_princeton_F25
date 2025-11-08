@@ -13,14 +13,13 @@ export class Gun {
     }
 
     canShoot(now: number): boolean {
-        // Melee weapons don't use ammo or reload
+        // Melee weapons don't use ammo or reload, but keep a small delay to prevent spam
         if (this.definition.isMelee) {
             return (now - this.lastShotTime) >= this.definition.fireDelay;
         }
 
-        return !this.reloading &&
-               this.ammo > 0 &&
-               (now - this.lastShotTime) >= this.definition.fireDelay;
+        // Guns: only check reload status and ammo, no fire delay
+        return !this.reloading && this.ammo > 0;
     }
 
     shoot(now: number): void {
