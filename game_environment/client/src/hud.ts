@@ -7,6 +7,7 @@ export class HUD {
     private killFeed: HTMLElement;
     private freeCamIndicator: HTMLElement;
     private xpContainer: HTMLElement;
+    private leaderboard: HTMLElement;
 
     constructor() {
         this.healthFill = document.getElementById('health-fill')!;
@@ -21,6 +22,9 @@ export class HUD {
 
         // Create XP display
         this.xpContainer = this.createXPDisplay();
+
+        // Create leaderboard (hidden by default)
+        this.leaderboard = this.createLeaderboard();
     }
 
     private createFreeCamIndicator(): HTMLElement {
@@ -193,5 +197,128 @@ export class HUD {
         // Update progress bar
         xpFill.style.width = `${progressPercent}%`;
         xpText.textContent = `${xpInCurrentLevel} / ${xpNeededForNextLevel}`;
+    }
+
+    private createLeaderboard(): HTMLElement {
+        const container = document.createElement('div');
+        container.id = 'leaderboard';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 100;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            min-width: 280px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        `;
+
+        // Title
+        const title = document.createElement('div');
+        title.style.cssText = `
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #FFD700;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 8px;
+        `;
+        title.textContent = '🏆 LEADERBOARD';
+
+        // Entries container
+        const entries = document.createElement('div');
+        entries.id = 'leaderboard-entries';
+        entries.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        `;
+
+        container.appendChild(title);
+        container.appendChild(entries);
+        document.body.appendChild(container);
+
+        return container;
+    }
+
+    updateLeaderboard(players: Array<{ id: number; username: string; xp: number; level: number; dead: boolean }>): void {
+        const entries = document.getElementById('leaderboard-entries');
+        if (!entries) return;
+
+        // Sort players by XP (descending)
+        const sorted = [...players].sort((a, b) => (b.xp || 0) - (a.xp || 0));
+
+        // Clear existing entries
+        entries.innerHTML = '';
+
+        // Create entry for each player
+        sorted.forEach((player, index) => {
+            const entry = document.createElement('div');
+            entry.style.cssText = `
+                padding: 8px 10px;
+                background: ${index === 0 ? 'rgba(255, 215, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)'};
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                transition: all 0.3s ease;
+                border: 1px solid ${index === 0 ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 255, 255, 0.1)'};
+                ${player.dead ? 'opacity: 0.5;' : ''}
+            `;
+
+            // Rank/Crown
+            const rank = document.createElement('span');
+            rank.style.cssText = `
+                font-size: ${index === 0 ? '20px' : '16px'};
+                font-weight: bold;
+                min-width: 30px;
+                text-align: center;
+            `;
+            rank.textContent = index === 0 ? '👑' : `#${index + 1}`;
+
+            // Player name
+            const name = document.createElement('span');
+            name.style.cssText = `
+                flex: 1;
+                font-weight: ${index === 0 ? 'bold' : 'normal'};
+                color: ${index === 0 ? '#FFD700' : '#FFFFFF'};
+                font-size: ${index === 0 ? '15px' : '13px'};
+            `;
+            name.textContent = player.username + (player.dead ? ' ☠️' : '');
+
+            // XP display
+            const xp = document.createElement('span');
+            xp.style.cssText = `
+                font-weight: bold;
+                color: ${index === 0 ? '#FFD700' : '#87CEEB'};
+                font-size: ${index === 0 ? '14px' : '12px'};
+                background: rgba(0, 0, 0, 0.3);
+                padding: 2px 6px;
+                border-radius: 4px;
+            `;
+            xp.textContent = `${player.xp || 0} XP`;
+
+            entry.appendChild(rank);
+            entry.appendChild(name);
+            entry.appendChild(xp);
+            entries.appendChild(entry);
+        });
+    }
+
+    showLeaderboard(): void {
+        this.leaderboard.style.display = 'block';
+    }
+
+    hideLeaderboard(): void {
+        this.leaderboard.style.display = 'none';
     }
 }

@@ -389,6 +389,10 @@ export class GameClient {
             document.getElementById('hud')!.style.display = 'none';
             const xpDisplay = document.getElementById('xp-display');
             if (xpDisplay) xpDisplay.style.display = 'none';
+
+            // Show and update leaderboard for spectators
+            this.hud.showLeaderboard();
+            this.hud.updateLeaderboard(packet.players);
         }
 
         // Update lighting system with obstacle data - DISABLED FOR DEBUG
