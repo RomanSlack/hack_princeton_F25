@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for the agent builder */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Canvas styling */
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f0f0f0 1px, transparent 1px),
+              linear-gradient(#f0f0f0 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Block styling */
+.block {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  transition: box-shadow 0.2s;
+}
+
+.block:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.block.dragging {
+  opacity: 0.8;
+  z-index: 1000;
+}
+
+/* Connection point styling */
+.connection-point {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #3b82f6;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.connection-point:hover {
+  transform: scale(1.3);
+  background: #2563eb;
+}
+
+/* SVG arrow styling */
+.arrow {
+  stroke: #3b82f6;
+  stroke-width: 2;
+  fill: none;
+  pointer-events: none;
+}
+
+.arrow-head {
+  fill: #3b82f6;
+}
+
