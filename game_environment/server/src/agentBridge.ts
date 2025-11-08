@@ -143,13 +143,6 @@ export class AgentBridge {
             state.attackTarget = targetId;
         }
 
-        // Limit to 2 shots per attack action
-        if (state.attackShotsFired >= 2) {
-            // Already fired 2 shots, don't attack anymore
-            input.attacking = false;
-            return;
-        }
-
         // Find target (check both players and AI agents)
         let targetPosition: Vector | null = null;
 
@@ -172,10 +165,26 @@ export class AgentBridge {
         }
 
         if (targetPosition) {
-            // Aim at target and shoot
-            input.mouse = targetPosition;
-            input.attacking = true;
-            state.attackShotsFired++; // Increment shot counter
+            // Check if agent's weapon can shoot (respects fire delay)
+            const activeWeapon = agent.weapons[agent.activeWeaponIndex];
+            const canShoot = activeWeapon && activeWeapon.canShoot(now);
+
+            // Only increment counter when actually capable of shooting
+            if (canShoot && state.attackShotsFired < 2) {
+                // Aim at target and shoot
+                input.mouse = targetPosition;
+                input.attacking = true;
+                state.attackShotsFired++; // Only increment when we can actually shoot
+                console.log(`[AgentBridge] Agent ${agent.username} firing shot ${state.attackShotsFired}/2 at ${targetId}`);
+            } else if (state.attackShotsFired >= 2) {
+                // Already fired 2 shots, just aim but don't shoot
+                input.mouse = targetPosition;
+                input.attacking = false;
+            } else {
+                // Weapon on cooldown, just aim
+                input.mouse = targetPosition;
+                input.attacking = false;
+            }
         } else {
             console.warn(`[AgentBridge] Target not found: ${targetId}`);
         }
