@@ -86,8 +86,42 @@ export default function AgentGameBuilder() {
   const [isOverTrash, setIsOverTrash] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [pendingAgentBlock, setPendingAgentBlock] = useState(null);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const canvasRef = useRef(null);
   const blockIdCounter = useRef(0);
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 0.1, 2)); // Max zoom 2x
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 0.1, 0.5)); // Min zoom 0.5x
+  };
+
+  // Clear all blocks with confirmation
+  const handleClearAll = () => {
+    if (blocks.length === 0 && connections.length === 0) {
+      return; // Nothing to clear
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to clear all blocks and connections?\n\nThis will remove ${blocks.length} block(s) and ${connections.length} connection(s). This action cannot be undone.`
+    );
+
+    if (confirmed) {
+      setBlocks([]);
+      setConnections([]);
+      setConnectingFrom(null);
+      setPendingAgentBlock(null);
+      // Reset zoom and pan to defaults
+      setZoom(1);
+      setPanOffset({ x: 0, y: 0 });
+    }
+  };
 
   // Start dragging from palette
   const handlePaletteMouseDown = (e, blockDef, category) => {
@@ -103,22 +137,46 @@ export default function AgentGameBuilder() {
   // Start dragging a block
   const handleBlockMouseDown = (e, blockId) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent canvas panning when clicking on block
     const block = blocks.find(b => b.id === blockId);
     if (!block) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    // Calculate offset relative to canvas, accounting for pan and zoom
+    const offsetX = (e.clientX - canvasRect.left - panOffset.x) / zoom - block.x;
+    const offsetY = (e.clientY - canvasRect.top - panOffset.y) / zoom - block.y;
 
     setDraggedBlock({ id: blockId, offsetX, offsetY });
   };
 
+  // Start panning canvas (middle mouse button or drag on empty canvas)
+  const handleCanvasMouseDown = (e) => {
+    // Only start panning if:
+    // 1. Middle mouse button (button === 1)
+    // 2. Left mouse button on empty canvas (not on a block - blocks stop propagation)
+    if (e.button === 1 || (e.button === 0 && e.target === canvasRef.current)) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    }
+  };
+
   // Handle mouse move
   const handleMouseMove = (e) => {
+    // Handle canvas panning
+    if (isPanning) {
+      setPanOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y,
+      });
+      return;
+    }
+
     if (draggedBlock) {
       const rect = canvasRef.current.getBoundingClientRect();
-      let x = e.clientX - rect.left - draggedBlock.offsetX;
-      let y = e.clientY - rect.top - draggedBlock.offsetY;
+      // Calculate new block position relative to canvas (accounting for zoom and pan)
+      let x = (e.clientX - rect.left - panOffset.x) / zoom - draggedBlock.offsetX;
+      let y = (e.clientY - rect.top - panOffset.y) / zoom - draggedBlock.offsetY;
 
       // Constrain x to be at least 0 (don't allow negative x values which would cross into sidebar)
       x = Math.max(0, x);
@@ -150,14 +208,20 @@ export default function AgentGameBuilder() {
     if (connectingFrom) {
       const rect = canvasRef.current.getBoundingClientRect();
       setMousePos({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: (e.clientX - rect.left - panOffset.x) / zoom,
+        y: (e.clientY - rect.top - panOffset.y) / zoom,
       });
     }
   };
 
   // Stop dragging / Drop block
   const handleMouseUp = (e) => {
+    // Stop panning
+    if (isPanning) {
+      setIsPanning(false);
+      // Don't return here, continue to handle block drop if needed
+    }
+
     // Delete block if dropped over trash
     if (draggedBlock && isOverTrash) {
       handleBlockDelete(draggedBlock.id);
@@ -169,8 +233,9 @@ export default function AgentGameBuilder() {
     // Drop block from palette
     if (draggingFromPalette && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - 60;
-      const y = e.clientY - rect.top - 20;
+      // Account for pan offset and zoom when dropping blocks
+      const x = (e.clientX - rect.left - panOffset.x) / zoom - 60;
+      const y = (e.clientY - rect.top - panOffset.y) / zoom - 20;
 
       const blockId = `block-${blockIdCounter.current++}`;
       const { blockDef, category } = draggingFromPalette;
@@ -294,11 +359,14 @@ export default function AgentGameBuilder() {
     setConfigModalBlock(null);
   };
 
-  // Get block center position
+  // Get block center position (accounting for pan offset and zoom)
   const getBlockCenter = (blockId) => {
     const block = blocks.find(b => b.id === blockId);
     if (!block) return { x: 0, y: 0 };
-    return { x: block.x + 60, y: block.y + 20 };
+    return { 
+      x: (block.x + 60) * zoom + panOffset.x, 
+      y: (block.y + 20) * zoom + panOffset.y 
+    };
   };
 
   // Deploy agent to backend
@@ -550,6 +618,37 @@ export default function AgentGameBuilder() {
                 <li>• Double-click to configure/delete</li>
               </ul>
             </div>
+
+            {/* Clear All Button */}
+            <div className="mt-6 pt-6 border-t border-gray-300 dark:border-gray-600">
+              <button
+                onClick={handleClearAll}
+                disabled={blocks.length === 0 && connections.length === 0}
+                className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all ${
+                  blocks.length === 0 && connections.length === 0
+                    ? 'bg-gray-400 dark:bg-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed opacity-50'
+                    : 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg active:scale-95'
+                }`}
+                title={blocks.length === 0 && connections.length === 0 ? 'No blocks to clear' : 'Clear all blocks and connections'}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg 
+                    className="w-4 h-4" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                    />
+                  </svg>
+                  <span>Clear All Blocks</span>
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* Dragging preview from palette */}
@@ -571,13 +670,16 @@ export default function AgentGameBuilder() {
           {/* Canvas - Node Workspace */}
           <div
             ref={canvasRef}
-            className={`flex-1 relative ${theme.bg.canvas} overflow-hidden`}
+            className={`flex-1 relative ${theme.bg.canvas} overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{
               backgroundImage: theme.isDark 
                 ? 'radial-gradient(circle, #404040 1px, transparent 1px)'
                 : 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
-              backgroundSize: '24px 24px'
+              backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+              backgroundPosition: `${panOffset.x}px ${panOffset.y}px`
             }}
+            onMouseDown={handleCanvasMouseDown}
+            onContextMenu={(e) => e.preventDefault()} // Prevent right-click menu when panning
           >
             {/* SVG for connections */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
@@ -615,8 +717,8 @@ export default function AgentGameBuilder() {
                 <line
                   x1={getBlockCenter(connectingFrom).x}
                   y1={getBlockCenter(connectingFrom).y}
-                  x2={mousePos.x}
-                  y2={mousePos.y}
+                  x2={mousePos.x * zoom + panOffset.x}
+                  y2={mousePos.y * zoom + panOffset.y}
                   stroke="#3b82f6"
                   strokeWidth="3"
                   strokeDasharray="8,4"
@@ -648,8 +750,10 @@ export default function AgentGameBuilder() {
                 onDoubleClick={(e) => handleBlockDoubleClick(e, block.id)}
                 className="absolute rounded-lg shadow-lg text-white text-sm font-medium cursor-move select-none hover:shadow-xl transition-shadow"
                 style={{
-                  left: block.x,
-                  top: block.y,
+                  left: block.x * zoom + panOffset.x,
+                  top: block.y * zoom + panOffset.y,
+                  transform: `scale(${zoom})`,
+                  transformOrigin: '0 0',
                   backgroundColor: block.color,
                   padding: '8px 16px',
                   zIndex: 10,
@@ -712,6 +816,63 @@ export default function AgentGameBuilder() {
                 </div>
               </div>
             )}
+
+            {/* Zoom Controls - Bottom Right */}
+            <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-50">
+              <button
+                onClick={handleZoomIn}
+                disabled={zoom >= 2}
+                className={`w-10 h-10 rounded-lg shadow-lg flex items-center justify-center transition-all ${
+                  zoom >= 2
+                    ? 'bg-gray-400 cursor-not-allowed opacity-50'
+                    : `${theme.bg.secondary} ${theme.border.primary} border hover:bg-opacity-80 cursor-pointer`
+                }`}
+                title="Zoom In"
+              >
+                <svg 
+                  className={`w-5 h-5 ${theme.text.primary}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={handleZoomOut}
+                disabled={zoom <= 0.5}
+                className={`w-10 h-10 rounded-lg shadow-lg flex items-center justify-center transition-all ${
+                  zoom <= 0.5
+                    ? 'bg-gray-400 cursor-not-allowed opacity-50'
+                    : `${theme.bg.secondary} ${theme.border.primary} border hover:bg-opacity-80 cursor-pointer`
+                }`}
+                title="Zoom Out"
+              >
+                <svg 
+                  className={`w-5 h-5 ${theme.text.primary}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M20 12H4" 
+                  />
+                </svg>
+              </button>
+              <div className={`w-10 h-8 rounded-lg shadow-lg flex items-center justify-center ${theme.bg.secondary} ${theme.border.primary} border`}>
+                <span className={`text-xs font-semibold ${theme.text.primary}`}>
+                  {Math.round(zoom * 100)}%
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
