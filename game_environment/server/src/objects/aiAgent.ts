@@ -252,6 +252,31 @@ export class AIAgent extends GameObject {
         return 1 + (level * 0.05);
     }
 
+    /**
+     * Directly move the agent by a relative offset (for AI backend commands)
+     * This bypasses the input system for more precise AI control
+     */
+    moveByOffset(offset: Vector, game: Game): boolean {
+        const newPosition = Vec.add(this.position, offset);
+
+        // Check collision with obstacles
+        const newHitbox = new CircleHitbox(GameConstants.PLAYER_RADIUS, newPosition);
+        const nearbyObjects = game.grid.intersectsHitbox(newHitbox);
+
+        for (const obj of nearbyObjects) {
+            if (obj === this) continue;
+            if (newHitbox.collidesWith(obj.hitbox)) {
+                return false; // Collision detected, movement failed
+            }
+        }
+
+        // Update position
+        this.position = newPosition;
+        this.hitbox.position = newPosition;
+        game.grid.updateObject(this);
+        return true; // Movement successful
+    }
+
     serialize(): PlayerData {
         return {
             id: this.id,
@@ -262,7 +287,9 @@ export class AIAgent extends GameObject {
             activeWeapon: this.activeWeaponIndex,
             username: this.username,
             dead: this.dead,
-            color: this.color
+            color: this.color,
+            xp: this.xp,
+            level: this.getLevel()
         };
     }
 }

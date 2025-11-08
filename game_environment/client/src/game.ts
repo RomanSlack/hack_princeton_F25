@@ -331,6 +331,7 @@ export class GameClient {
         // Update HUD (only for players, not spectators)
         if (!this.isSpectator && packet.playerData) {
             this.hud.updateHealth(packet.playerData.health);
+            this.hud.updateXP(packet.playerData.xp, packet.playerData.level);
 
             const activeWeapon = packet.playerData.weapons[this.lastPlayerData?.activeWeapon ?? 0];
             if (activeWeapon) {
@@ -683,6 +684,31 @@ export class GameClient {
     private createLootSprite(lootData: LootData): RenderObject {
         const container = new PIXI.Container();
 
+        // Handle XP orb separately
+        if (lootData.type === 'xp_orb') {
+            const graphic = new PIXI.Graphics();
+            graphic.circle(0, 0, 2);  // Small yellow circle
+            graphic.fill({ color: 0xFFFF00, alpha: 0.9 });
+            graphic.stroke({ color: 0xFFAA00, width: 0.3 });
+
+            // Add glow effect
+            const glow = new PIXI.Graphics();
+            glow.circle(0, 0, 3);
+            glow.fill({ color: 0xFFFF00, alpha: 0.3 });
+            container.addChild(glow);
+            container.addChild(graphic);
+
+            container.zIndex = 15;
+            this.app.stage.addChild(container);
+
+            return {
+                container,
+                position: Vec(lootData.x, lootData.y),
+                rotation: 0
+            };
+        }
+
+        // Regular loot rendering
         let textureName = '';
         if (lootData.type === 'pistol') textureName = 'loot_pistol';
         else if (lootData.type === 'rifle') textureName = 'loot_rifle';

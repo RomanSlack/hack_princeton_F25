@@ -6,6 +6,7 @@ export class HUD {
     private ammoReserve: HTMLElement;
     private killFeed: HTMLElement;
     private freeCamIndicator: HTMLElement;
+    private xpContainer: HTMLElement;
 
     constructor() {
         this.healthFill = document.getElementById('health-fill')!;
@@ -17,6 +18,9 @@ export class HUD {
 
         // Create free cam indicator if it doesn't exist
         this.freeCamIndicator = document.getElementById('freecam-indicator') || this.createFreeCamIndicator();
+
+        // Create XP display
+        this.xpContainer = this.createXPDisplay();
     }
 
     private createFreeCamIndicator(): HTMLElement {
@@ -42,6 +46,86 @@ export class HUD {
         indicator.textContent = '🎥 FREE CAM MODE - Press TAB to exit | WASD to move';
         document.body.appendChild(indicator);
         return indicator;
+    }
+
+    private createXPDisplay(): HTMLElement {
+        const container = document.createElement('div');
+        container.id = 'xp-display';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 100;
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            min-width: 200px;
+        `;
+
+        // Level display
+        const levelText = document.createElement('div');
+        levelText.id = 'xp-level';
+        levelText.style.cssText = `
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #FFD700;
+            font-size: 15px;
+        `;
+        levelText.textContent = 'Level 0';
+
+        // XP bar container
+        const xpBarBg = document.createElement('div');
+        xpBarBg.style.cssText = `
+            width: 100%;
+            height: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            position: relative;
+        `;
+
+        // XP bar fill
+        const xpBarFill = document.createElement('div');
+        xpBarFill.id = 'xp-fill';
+        xpBarFill.style.cssText = `
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+            transition: width 0.3s ease;
+            border-radius: 8px;
+        `;
+
+        // XP text overlay
+        const xpText = document.createElement('div');
+        xpText.id = 'xp-text';
+        xpText.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        `;
+        xpText.textContent = '0 / 100';
+
+        xpBarBg.appendChild(xpBarFill);
+        xpBarBg.appendChild(xpText);
+        container.appendChild(levelText);
+        container.appendChild(xpBarBg);
+
+        document.body.appendChild(container);
+        return container;
     }
 
     showSpectatorMode(): void {
@@ -91,5 +175,23 @@ export class HUD {
 
     hideFreeCamIndicator(): void {
         this.freeCamIndicator.style.display = 'none';
+    }
+
+    updateXP(xp: number, level: number): void {
+        const levelText = document.getElementById('xp-level')!;
+        const xpFill = document.getElementById('xp-fill')!;
+        const xpText = document.getElementById('xp-text')!;
+
+        // Update level display
+        levelText.textContent = `Level ${level}`;
+
+        // Calculate XP progress within current level
+        const xpInCurrentLevel = xp % 100;
+        const xpNeededForNextLevel = 100;
+        const progressPercent = (xpInCurrentLevel / xpNeededForNextLevel) * 100;
+
+        // Update progress bar
+        xpFill.style.width = `${progressPercent}%`;
+        xpText.textContent = `${xpInCurrentLevel} / ${xpNeededForNextLevel}`;
     }
 }

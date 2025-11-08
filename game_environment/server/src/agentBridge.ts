@@ -23,12 +23,16 @@ export interface BackendGameState {
     max_health: number;
     inventory: string[];
     ammo: { [key: string]: number };
+    xp: number;
+    level: number;
     nearby_agents: Array<{
         id: string;
         position: { x: number; y: number };
         distance: number;
         health: number;
         username: string;
+        xp: number;
+        level: number;
     }>;
     nearby_loot: Array<{
         type: string;
@@ -94,34 +98,24 @@ export class AgentBridge {
     }
 
     /**
-     * Apply move command - converts relative x,y to movement directions
+     * Apply move command - directly teleports agent by relative offset
      */
     private applyMoveCommand(input: InputPacket, action: BackendAction, agent: AIAgent, state: CommandState): void {
         const { x = 0, y = 0 } = action.parameters;
 
-        // Calculate target position (relative movement)
-        const targetPosition = Vec.add(agent.position, Vec(x, y));
-        state.moveTarget = targetPosition;
+        // Apply direct movement using the new moveByOffset method
+        const offset = Vec(x, y);
+        const success = agent.moveByOffset(offset, this.game);
 
-        // Calculate direction from current position to target
-        const direction = Vec.sub(targetPosition, agent.position);
-        const distance = Vec.len(direction);
-
-        if (distance > 0.1) { // Only move if target is far enough
-            const normalized = Vec.normalize(direction);
-
-            // Convert to movement keys
-            input.movement.up = normalized.y < -0.3;
-            input.movement.down = normalized.y > 0.3;
-            input.movement.left = normalized.x < -0.3;
-            input.movement.right = normalized.x > 0.3;
-
-            // Point mouse in movement direction for better orientation
-            input.mouse = targetPosition;
-        } else {
-            // Reached target, stop moving
-            state.moveTarget = null;
+        if (!success) {
+            console.log(`[AgentBridge] Agent ${agent.agentId} movement blocked by collision`);
         }
+
+        // Update mouse to face movement direction for better visuals
+        const targetPosition = Vec.add(agent.position, offset);
+        input.mouse = targetPosition;
+
+        state.moveTarget = success ? targetPosition : null;
     }
 
     /**
@@ -194,7 +188,9 @@ export class AgentBridge {
                     position: { x: player.position.x, y: player.position.y },
                     distance: Math.sqrt(distSquared),
                     health: player.health,
-                    username: player.username
+                    username: player.username,
+                    xp: player.xp,
+                    level: player.getLevel()
                 });
             }
         }
@@ -209,7 +205,9 @@ export class AgentBridge {
                     position: { x: otherAgent.position.x, y: otherAgent.position.y },
                     distance: Math.sqrt(distSquared),
                     health: otherAgent.health,
-                    username: otherAgent.username
+                    username: otherAgent.username,
+                    xp: otherAgent.xp,
+                    level: otherAgent.getLevel()
                 });
             }
         }
@@ -249,6 +247,8 @@ export class AgentBridge {
             max_health: agent.maxHealth,
             inventory,
             ammo: Object.fromEntries(agent.ammo),
+            xp: agent.xp,
+            level: agent.getLevel(),
             nearby_agents: nearbyAgents.sort((a, b) => a.distance - b.distance),
             nearby_loot: nearbyLoot.sort((a, b) => a.distance - b.distance),
             nearby_obstacles: nearbyObstacles.sort((a, b) => a.distance - b.distance)
