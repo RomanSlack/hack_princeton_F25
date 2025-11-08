@@ -267,6 +267,7 @@ function LessonBuilder({ lesson, config }) {
   const chatEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const canvasRef = useRef(null);
+  const blockRefs = useRef({}); // Store refs to measure actual block dimensions
 
   const blockIdCounter = useRef(0);
 
@@ -729,14 +730,126 @@ function LessonBuilder({ lesson, config }) {
     setConfigModalBlock(null);
   };
 
-  // Get block center position (accounting for pan offset and zoom)
-  const getBlockCenter = (blockId) => {
+  // Get actual block dimensions from DOM element
+  const getBlockDimensions = (blockId) => {
+    const blockElement = blockRefs.current[blockId];
+    if (blockElement) {
+      const rect = blockElement.getBoundingClientRect();
+      // Return actual rendered dimensions (already includes zoom via transform)
+      return {
+        width: rect.width,
+        height: rect.height,
+      };
+    }
+    // Fallback to estimated dimensions (accounting for zoom)
+    return { width: 140 * zoom, height: 50 * zoom };
+  };
+
+  // Get block connection point on edge (closest to target) and return edge info
+  const getBlockConnectionPoint = (blockId, targetBlockId) => {
     const block = blocks.find(b => b.id === blockId);
-    if (!block) return { x: 0, y: 0 };
-    return { 
-      x: (block.x + 60) * zoom + panOffset.x, 
-      y: (block.y + 20) * zoom + panOffset.y 
+    if (!block) return { x: 0, y: 0, edge: null };
+    
+    // Get actual block position and dimensions
+    const blockX = block.x * zoom + panOffset.x;
+    const blockY = block.y * zoom + panOffset.y;
+    const blockDims = getBlockDimensions(blockId);
+    const blockWidth = blockDims.width;
+    const blockHeight = blockDims.height;
+    
+    // Calculate block center
+    const centerX = blockX + blockWidth / 2;
+    const centerY = blockY + blockHeight / 2;
+    
+    // If no target, return center (for preview line)
+    if (!targetBlockId) {
+      return { x: centerX, y: centerY, edge: null };
+    }
+    
+    // Get target block center
+    const targetBlock = blocks.find(b => b.id === targetBlockId);
+    if (!targetBlock) return { x: centerX, y: centerY, edge: null };
+    
+    const targetDims = getBlockDimensions(targetBlockId);
+    const targetX = targetBlock.x * zoom + panOffset.x;
+    const targetY = targetBlock.y * zoom + panOffset.y;
+    const targetWidth = targetDims.width;
+    const targetHeight = targetDims.height;
+    const targetCenterX = targetX + targetWidth / 2;
+    const targetCenterY = targetY + targetHeight / 2;
+    
+    // Calculate 4 edge connection points (on the actual edge, accounting for border and arrowhead)
+    // Arrowhead marker has refX="9", meaning it extends 9px from the path end
+    // We need to place the connection point slightly outside the block so the arrowhead doesn't overlap
+    // The arrowhead should point INTO the block (opposite direction of the edge)
+    const borderWidth = 2; // 2px border
+    const arrowheadOffset = 8; // Account for arrowhead marker size (refX="9")
+    
+    // For each edge, calculate the point where the arrow should connect
+    // The path ends here (outside the block), and the arrowhead extends inward from this point
+    // Top: point ABOVE block (y decreases), arrow points DOWN
+    // Bottom: point BELOW block (y increases), arrow points UP
+    // Left: point LEFT of block (x decreases), arrow points RIGHT
+    // Right: point RIGHT of block (x increases), arrow points LEFT
+    const topPoint = { x: centerX, y: blockY - arrowheadOffset, edge: 'top' };
+    const bottomPoint = { x: centerX, y: blockY + blockHeight + arrowheadOffset, edge: 'bottom' };
+    const leftPoint = { x: blockX - arrowheadOffset, y: centerY, edge: 'left' };
+    const rightPoint = { x: blockX + blockWidth + arrowheadOffset, y: centerY, edge: 'right' };
+    
+    // Calculate distances to target center
+    const distances = {
+      top: Math.sqrt(Math.pow(topPoint.x - targetCenterX, 2) + Math.pow(topPoint.y - targetCenterY, 2)),
+      bottom: Math.sqrt(Math.pow(bottomPoint.x - targetCenterX, 2) + Math.pow(bottomPoint.y - targetCenterY, 2)),
+      left: Math.sqrt(Math.pow(leftPoint.x - targetCenterX, 2) + Math.pow(leftPoint.y - targetCenterY, 2)),
+      right: Math.sqrt(Math.pow(rightPoint.x - targetCenterX, 2) + Math.pow(rightPoint.y - targetCenterY, 2)),
     };
+    
+    // Find closest edge point
+    const closestEdge = Object.entries(distances).reduce((a, b) => a[1] < b[1] ? a : b)[0];
+    
+    switch (closestEdge) {
+      case 'top': return topPoint;
+      case 'bottom': return bottomPoint;
+      case 'left': return leftPoint;
+      case 'right': return rightPoint;
+      default: return { x: centerX, y: centerY, edge: null };
+    }
+  };
+
+  // Get arrowhead orientation based on edge
+  const getArrowheadOrientation = (edge) => {
+    switch (edge) {
+      case 'top': return 90; // Point down (90 degrees)
+      case 'bottom': return 270; // Point up (270 degrees)
+      case 'left': return 0; // Point right (0 degrees)
+      case 'right': return 180; // Point left (180 degrees)
+      default: return 'auto';
+    }
+  };
+
+  // Extend connection point to account for arrowhead tip
+  // The arrowhead marker attaches at refX=10, but the tip extends to x=12
+  // So we need to extend the path endpoint by 2 units in the direction the arrow points
+  const extendToArrowheadTip = (point, edge) => {
+    const tipExtension = 2; // Distance from refX (10) to tip (12)
+    
+    switch (edge) {
+      case 'top': // Arrow points down
+        return { ...point, y: point.y + tipExtension };
+      case 'bottom': // Arrow points up
+        return { ...point, y: point.y - tipExtension };
+      case 'left': // Arrow points right
+        return { ...point, x: point.x + tipExtension };
+      case 'right': // Arrow points left
+        return { ...point, x: point.x - tipExtension };
+      default:
+        return point;
+    }
+  };
+
+  // Get block center position (for backward compatibility with preview line)
+  const getBlockCenter = (blockId) => {
+    return getBlockConnectionPoint(blockId, null);
   };
 
   // Deploy agent to backend
@@ -1395,19 +1508,36 @@ function LessonBuilder({ lesson, config }) {
             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
               {/* Existing connections */}
               {connections.map(conn => {
-                const from = getBlockCenter(conn.from);
-                const to = getBlockCenter(conn.to);
-                const midX = (from.x + to.x) / 2;
-                const midY = (from.y + to.y) / 2;
+                const from = getBlockConnectionPoint(conn.from, conn.to);
+                const to = getBlockConnectionPoint(conn.to, conn.from);
+                // Extend the endpoint to the arrowhead tip
+                const toExtended = extendToArrowheadTip(to, to.edge);
+                const midX = (from.x + toExtended.x) / 2;
+                const midY = (from.y + toExtended.y) / 2;
+                const arrowOrientation = getArrowheadOrientation(to.edge);
+                const markerId = `arrowhead-${arrowOrientation}`;
+
+                // Determine curve shape based on connection edge
+                // For top/bottom connections, flip curve to be vertical-first
+                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
+                let pathD;
+                
+                if (isVerticalConnection) {
+                  // Vertical-first curve: curve vertically first, then horizontally
+                  pathD = `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+                } else {
+                  // Horizontal-first curve: curve horizontally first, then vertically
+                  pathD = `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+                }
 
                 return (
                   <g key={conn.id}>
                     <path
-                      d={`M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${to.x} ${to.y}`}
+                      d={pathD}
                       stroke="#475569"
                       strokeWidth="3"
                       fill="none"
-                      markerEnd="url(#arrowhead)"
+                      markerEnd={`url(#${markerId})`}
                     />
                     <circle
                       cx={midX}
@@ -1435,17 +1565,55 @@ function LessonBuilder({ lesson, config }) {
                 />
               )}
 
-              {/* Arrowhead marker */}
+              {/* Arrowhead markers for different orientations */}
               <defs>
+                {/* Arrowhead pointing right (0 degrees) - for left edge connections */}
                 <marker
-                  id="arrowhead"
-                  markerWidth="10"
-                  markerHeight="10"
-                  refX="9"
-                  refY="3"
-                  orient="auto"
+                  id="arrowhead-0"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="0"
+                  markerUnits="userSpaceOnUse"
                 >
-                  <polygon points="0 0, 10 3, 0 6" fill="#475569" />
+                  <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+                </marker>
+                {/* Arrowhead pointing down (90 degrees) - for top edge connections */}
+                <marker
+                  id="arrowhead-90"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="90"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+                </marker>
+                {/* Arrowhead pointing left (180 degrees) - for right edge connections */}
+                <marker
+                  id="arrowhead-180"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="180"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+                </marker>
+                {/* Arrowhead pointing up (270 degrees) - for bottom edge connections */}
+                <marker
+                  id="arrowhead-270"
+                  markerWidth="12"
+                  markerHeight="12"
+                  refX="10"
+                  refY="6"
+                  orient="270"
+                  markerUnits="userSpaceOnUse"
+                >
+                  <polygon points="0 0, 12 6, 0 12" fill="#475569" />
                 </marker>
               </defs>
             </svg>
@@ -1454,6 +1622,10 @@ function LessonBuilder({ lesson, config }) {
             {blocks.map(block => (
               <div
                 key={block.id}
+                ref={(el) => {
+                  if (el) blockRefs.current[block.id] = el;
+                  else delete blockRefs.current[block.id];
+                }}
                 onMouseDown={(e) => handleBlockMouseDown(e, block.id)}
                 onClick={(e) => handleBlockClick(e, block.id)}
                 onContextMenu={(e) => handleBlockRightClick(e, block.id)}
