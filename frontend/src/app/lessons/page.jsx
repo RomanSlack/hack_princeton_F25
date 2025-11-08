@@ -505,12 +505,6 @@ const COMPONENTS = [
     lessonIds: [27, 28, 29, 30, 31, 32, 33],
     dependencies: ['frameworks', 'execution-orchestration'],
   },
-  {
-    id: 'use-cases',
-    name: 'Use Cases',
-    lessonIds: [34, 35, 36, 37, 38, 39],
-    dependencies: ['frameworks', 'specialized-topics'],
-  },
 ];
 
 // Progress tracking (in a real app, this would come from a backend/state management)
@@ -524,7 +518,8 @@ const getInitialProgress = () => {
 
 export default function LessonsPage() {
   const [progress, setProgress] = useState(getInitialProgress);
-  const [selectedComponent, setSelectedComponent] = useState(COMPONENTS[0] || null);
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Save progress to localStorage
   const updateProgress = (lessonId, status) => {
@@ -535,8 +530,20 @@ export default function LessonsPage() {
     }
   };
 
+  // Open sidebar with selected component
+  const handleComponentSelect = (component) => {
+    setSelectedComponent(component);
+    setIsSidebarOpen(true);
+  };
+
+  // Smoothly close sidebar, then clear content after transition
+  const handleCloseSidebar = () => {
+    setIsSidebarOpen(false);
+    setTimeout(() => setSelectedComponent(null), 300); // match CSS duration
+  };
+
   return (
-    <div className="min-h-screen bg-[#1e1e1e] flex">
+    <div className="min-h-screen bg-[#1e1e1e] flex flex-row">
       {/* Main Content - Roadmap */}
       <div className="flex-1 relative">
         <div className="h-screen bg-gradient-to-br from-[#1e1e1e] via-[#252526] to-[#1e1e1e] overflow-hidden">
@@ -544,19 +551,33 @@ export default function LessonsPage() {
             components={COMPONENTS}
             lessons={LESSONS}
             progress={progress}
-            onComponentSelect={setSelectedComponent}
+            onComponentSelect={handleComponentSelect}
           />
         </div>
       </div>
 
-      {/* Right Sidebar - Always visible */}
-      <ComponentDetailSidebar
-        component={selectedComponent}
-        lessons={LESSONS}
-        progress={progress}
-        onProgressUpdate={updateProgress}
-        onClose={() => setSelectedComponent(COMPONENTS[0] || null)}
-      />
+      {/* Right Sidebar - Side-by-side with roadmap */}
+      <div
+        className="h-screen transition-[width] duration-300 ease-out overflow-hidden"
+        style={{ width: isSidebarOpen ? '600px' : '0px' }}
+      >
+        <div
+          className="h-full"
+          style={{
+            transform: isSidebarOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 300ms ease-out',
+            width: '600px',
+          }}
+        >
+          <ComponentDetailSidebar
+            component={selectedComponent}
+            lessons={LESSONS}
+            progress={progress}
+            onProgressUpdate={updateProgress}
+            onClose={handleCloseSidebar}
+          />
+        </div>
+      </div>
     </div>
   );
 }

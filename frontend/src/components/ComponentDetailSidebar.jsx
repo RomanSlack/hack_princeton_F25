@@ -58,22 +58,10 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
   };
 
   // Get prerequisites for this component
-  const getPrerequisites = () => {
-    const prereqIds = new Set();
-    componentLessons.forEach(lesson => {
-      lesson.prerequisites.forEach(prereqId => {
-        if (!component.lessonIds.includes(prereqId)) {
-          prereqIds.add(prereqId);
-        }
-      });
-    });
-    return Array.from(prereqIds).map(id => lessons.find(l => l.id === id)).filter(Boolean);
-  };
-
-  const prerequisites = getPrerequisites();
+  // Removed: prerequisites section per request
 
   return (
-    <div className="w-[600px] h-screen bg-[#1e1e1e] text-white overflow-y-auto border-l border-[#3e3e42] flex-shrink-0">
+    <div className="w-[600px] h-screen bg-[#1e1e1e] text-white overflow-y-auto border-l border-[#3e3e42] flex-shrink-0 animate-slide-in-right">
       {/* Header */}
       <div className="sticky top-0 bg-[#252526] border-b border-[#3e3e42] p-6 z-10">
         <div className="flex items-center justify-between mb-4">
@@ -98,16 +86,13 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
           </div>
           <div className="w-full bg-[#3e3e42] rounded-full h-3 border border-[#4a4a4f] overflow-hidden">
             <div
-              className={`h-full transition-all duration-500 ${
+              className={`h-full transition-all duration-500 ease-in-out ${
                 progressPercentage === 100
                   ? 'bg-gradient-to-r from-green-400 to-green-500'
-                  : progressPercentage > 0
-                  ? 'bg-gradient-to-r from-blue-400 to-blue-500'
-                  : 'bg-transparent'
+                  : 'bg-gradient-to-r from-blue-400 to-blue-500'
               }`}
               style={{
                 width: `${progressPercentage}%`,
-                minWidth: progressPercentage > 0 ? '6px' : '0px',
               }}
             />
           </div>
@@ -115,43 +100,6 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
       </div>
 
       <div className="p-6">
-        {/* Prerequisites */}
-        {prerequisites.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Prerequisites</h3>
-            <div className="space-y-2">
-              {prerequisites.map(prereq => {
-                const prereqStatus = progress[prereq.id] || 'not-started';
-                const isCompleted = prereqStatus === 'completed';
-                return (
-                  <div
-                    key={prereq.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      isCompleted
-                        ? 'bg-[#2d2d30] border-green-500/30'
-                        : 'bg-[#252526] border-[#3e3e42]'
-                    }`}
-                  >
-                    <div className="flex-shrink-0">
-                      {isCompleted ? (
-                        <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <div className="w-5 h-5 border-2 border-gray-500 rounded"></div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{prereq.title}</div>
-                      <div className="text-xs text-gray-400">{prereq.focus}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Lessons Table */}
         <div>
           <h3 className="text-lg font-semibold mb-3">Lessons</h3>
@@ -170,25 +118,17 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
                 {componentLessons.map((lesson, index) => {
                   const lessonStatus = progress[lesson.id] || 'not-started';
                   const isCompleted = lessonStatus === 'completed';
-                  const isInProgress = lessonStatus === 'in-progress';
                   
                   return (
                     <tr
                       key={lesson.id}
-                      className={`border-b border-[#3e3e42] hover:bg-[#2d2d30] transition-colors ${
-                        isCompleted ? 'bg-[#1e3a1e]/30' : isInProgress ? 'bg-[#1e2a3a]/30' : ''
-                      }`}
+                      className={`border-b border-[#3e3e42] hover:bg-[#2d2d30] transition-colors ${isCompleted ? 'bg-[#1e3a1e]/30' : ''}`}
                     >
                       {/* Status */}
                       <td className="py-3 px-3">
                         <button
                           onClick={() => {
-                            const newStatus =
-                              lessonStatus === 'not-started'
-                                ? 'in-progress'
-                                : lessonStatus === 'in-progress'
-                                ? 'completed'
-                                : 'not-started';
+                            const newStatus = lessonStatus === 'completed' ? 'not-started' : 'completed';
                             onProgressUpdate(lesson.id, newStatus);
                           }}
                           className="flex items-center justify-center"
@@ -211,7 +151,6 @@ export default function ComponentDetailSidebar({ component, lessons, progress, o
                         <div className="flex items-center gap-2">
                           <div>
                             <div className="font-medium text-sm">{lesson.title}</div>
-                            <div className="text-xs text-gray-400">{lesson.focus}</div>
                           </div>
                         </div>
                       </td>

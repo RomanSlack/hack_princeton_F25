@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* React Flow styles */
-@import '@xyflow/react/dist/style.css';
-
 /* Custom styles for the agent builder */
 body {
   margin: 0;
