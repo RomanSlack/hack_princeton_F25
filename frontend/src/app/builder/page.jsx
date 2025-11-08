@@ -11,9 +11,9 @@ const BACKEND_URL = 'http://localhost:8001';
 const MODELS = [
   // Fast & cheap mini models
   { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Fast)' },
-  { value: 'anthropic/claude-3.5-haiku', label: 'Claude 3.5 Haiku (Fast)' },
-  { value: 'google/gemini-flash-1.5', label: 'Gemini 1.5 Flash (Fast)' },
-  { value: 'meta-llama/llama-3.1-8b-instruct', label: 'Llama 3.1 8B (Fast)' },
+  { value: 'anthropic/claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)' },
+  { value: 'google/gemini-1.5-flash', label: 'Gemini 1.5 Flash (Fast)' },
+  { value: 'fireworks/llama-v3p1-8b-instruct', label: 'Llama 3.1 8B (Fast)' },
 
   // Mid-tier models
   { value: 'openai/gpt-4.1-mini', label: 'GPT-4.1 Mini' },
@@ -22,9 +22,9 @@ const MODELS = [
 
   // Premium models (slower but more capable)
   { value: 'openai/gpt-4o', label: 'GPT-4o' },
-  { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-  { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus' },
-  { value: 'xai/grok-4', label: 'Grok 4' },
+  { value: 'anthropic/claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+  { value: 'anthropic/claude-3-opus-20240229', label: 'Claude 3 Opus' },
+  { value: 'xai/grok-4-fast-reasoning', label: 'Grok 4' },
 ];
 
 // Block type definitions matching backend expectations
@@ -1345,7 +1345,7 @@ export default function AgentGameBuilder() {
                     {/* Flowing highlighted arrow path */}
                     <path
                       d={arrowPathD}
-                      stroke="#3b82f6"
+                      stroke="#ef4444"
                       strokeWidth="3"
                       fill="none"
                       strokeDasharray={`${estimatedLength} ${estimatedLength}`}
@@ -1356,10 +1356,10 @@ export default function AgentGameBuilder() {
                       }}
                     />
 
-                    {/* Blue arrowhead that fades in/out at appropriate times */}
+                    {/* Red arrowhead that fades in/out at appropriate times */}
                     <polygon
                       points="0 0, 12 6, 0 12"
-                      fill="#3b82f6"
+                      fill="#ef4444"
                       transform={`translate(${toExtended.x}, ${toExtended.y}) rotate(${arrowOrientation}) translate(-10, -6)`}
                       style={{
                         animation: `${arrowheadFadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
