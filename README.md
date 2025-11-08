@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # GPT Agent Builder
 
 A minimal React application built with Vite and Tailwind CSS that allows you to visually design agent logic by dragging and connecting blocks on a canvas.
@@ -214,3 +215,6 @@ MIT
 ## Contributing
 
 Feel free to submit issues and pull requests!
+=======
+# hack_princeton_F25 
+>>>>>>> 2e1a46ba4f8a8aeb7539c184b134ac4c2ae2f143
