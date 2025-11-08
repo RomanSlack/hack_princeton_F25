@@ -68,7 +68,7 @@ const server = Bun.serve<ConnectionData>({
         if (url.pathname === "/api/agent/register" && req.method === "POST") {
             try {
                 const body = await req.json();
-                const { agent_id, username, preferredZone } = body;
+                const { agent_id, username, preferredZone, zone2LeftOnly } = body;
 
                 if (!agent_id) {
                     return new Response(JSON.stringify({
@@ -91,7 +91,7 @@ const server = Bun.serve<ConnectionData>({
                     });
                 }
 
-                const agent = game.addAIAgent(agent_id, username, preferredZone);
+                const agent = game.addAIAgent(agent_id, username, preferredZone, zone2LeftOnly);
                 const gameState = game.agentBridge.getGameStateForAgent(agent);
 
                 return new Response(JSON.stringify({

@@ -254,14 +254,14 @@ export class Game {
         return spectator;
     }
 
-    addAIAgent(agentId: string, username?: string, preferredZone?: "zone1" | "zone2"): AIAgent {
+    addAIAgent(agentId: string, username?: string, preferredZone?: "zone1" | "zone2", zone2LeftOnly?: boolean): AIAgent {
         // Check if agent already exists
         if (this.aiAgents.has(agentId)) {
             throw new Error(`AI Agent with ID ${agentId} already exists`);
         }
 
         // Default to zone1 (Main Arena) if no preference specified
-        const spawnPoint = this.getRandomSpawnPoint(preferredZone ?? "zone1");
+        const spawnPoint = this.getRandomSpawnPoint(preferredZone ?? "zone1", zone2LeftOnly);
         const displayName = username || `AI_${agentId}`;
         const color = this.getUniqueColor();
         const agent = new AIAgent(this.nextAIAgentId++, agentId, displayName, spawnPoint, color);
@@ -275,7 +275,8 @@ export class Game {
         this.grid.addObject(agent);
 
         const zoneName = preferredZone ? MAP_DATA.zones[preferredZone].name : MAP_DATA.zones["zone1"].name;
-        console.log(`[Game] AI Agent ${displayName} (${agentId}) joined in ${zoneName} at (${spawnPoint.x}, ${spawnPoint.y}) with color 0x${color.toString(16)}`);
+        const leftInfo = zone2LeftOnly && preferredZone === "zone2" ? " (left side)" : "";
+        console.log(`[Game] AI Agent ${displayName} (${agentId}) joined in ${zoneName}${leftInfo} at (${spawnPoint.x}, ${spawnPoint.y}) with color 0x${color.toString(16)}`);
 
         return agent;
     }
@@ -401,7 +402,7 @@ export class Game {
         return randomColor;
     }
 
-    private getRandomSpawnPoint(preferredZone?: "zone1" | "zone2"): Vector {
+    private getRandomSpawnPoint(preferredZone?: "zone1" | "zone2", zone2LeftOnly?: boolean): Vector {
         if (this.usedSpawnPoints.size >= MAP_DATA.playerSpawns.length) {
             this.usedSpawnPoints.clear();
         }
@@ -416,12 +417,21 @@ export class Game {
             maxIndex = zoneInfo.spawnRange[1];
         }
 
+        // Gate dividing wall is at x = 728 (ZONE_2_OFFSET_X + 128 = 600 + 128)
+        const GATE_X = 728;
+
         let attempts = 0;
         while (attempts < 100) {
             const index = Math.floor(Math.random() * (maxIndex - minIndex + 1)) + minIndex;
             if (!this.usedSpawnPoints.has(index)) {
                 const spawn = MAP_DATA.playerSpawns[index];
                 const spawnPos = Vec(spawn.x, spawn.y);
+
+                // If zone2LeftOnly is enabled, skip spawns on or right of the gate wall
+                if (zone2LeftOnly && preferredZone === "zone2" && spawnPos.x >= GATE_X) {
+                    attempts++;
+                    continue;
+                }
 
                 // Check if spawn position collides with any obstacles
                 const playerHitbox = new CircleHitbox(GameConstants.PLAYER_RADIUS, spawnPos);

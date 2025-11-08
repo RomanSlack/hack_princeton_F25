@@ -35,7 +35,8 @@ class GameEnvironmentClient:
         self,
         agent_id: str,
         username: Optional[str] = None,
-        preferred_zone: Optional[str] = None
+        preferred_zone: Optional[str] = None,
+        zone2_left_only: bool = False
     ) -> Dict[str, Any]:
         """
         Register a new AI agent in the game environment.
@@ -44,6 +45,7 @@ class GameEnvironmentClient:
             agent_id: Unique identifier for the agent
             username: Optional display name for the agent
             preferred_zone: Optional zone preference ("zone1" or "zone2")
+            zone2_left_only: If True and zone is "zone2", only spawn on left side of gate
 
         Returns:
             Registration response with initial game state
@@ -54,6 +56,8 @@ class GameEnvironmentClient:
                 payload["username"] = username
             if preferred_zone:
                 payload["preferredZone"] = preferred_zone
+            if zone2_left_only:
+                payload["zone2LeftOnly"] = zone2_left_only
 
             response = await self.client.post(
                 f"{self.base_url}/api/agent/register",
@@ -62,7 +66,8 @@ class GameEnvironmentClient:
             response.raise_for_status()
             data = response.json()
             zone_info = f" in {preferred_zone}" if preferred_zone else ""
-            logger.info(f"Registered agent {agent_id} at position {data.get('position')}{zone_info}")
+            left_info = " (left side only)" if zone2_left_only and preferred_zone == "zone2" else ""
+            logger.info(f"Registered agent {agent_id} at position {data.get('position')}{zone_info}{left_info}")
             return data
         except Exception as e:
             logger.error(f"Failed to register agent {agent_id}: {e}")

@@ -273,25 +273,15 @@ class ProgramSchema(BaseModel):
         if not has_on_start:
             raise ValueError("Program must have at least one 'onStart' action block")
 
-        # Validate all block IDs are unique
-        block_ids = [block.id for block in v]
-        if len(block_ids) != len(set(block_ids)):
-            raise ValueError("All block IDs must be unique")
 
-        # Validate all referenced IDs exist
-        block_id_set = set(block_ids)
-        for block in v:
-            if isinstance(block, (ActionBlock, ToolBlock)) and block.next:
-                if block.next not in block_id_set:
-                    raise ValueError(f"Block {block.id} references non-existent block: {block.next}")
-            elif isinstance(block, AgentBlock):
-                for conn in block.tool_connections:
-                    if conn.tool_id not in block_id_set:
-                        raise ValueError(
-                            f"Agent block {block.id} references non-existent tool block: {conn.tool_id}"
-                        )
-
-        return v
+class AddAgentRequest(BaseModel):
+    """Request schema for adding an agent"""
+    agent_id: str = Field(..., description="Unique identifier for this agent")
+    blocks: List[Block] = Field(..., description="List of all blocks in the program")
+    register_in_game: bool = Field(False, description="Whether to register agent in game immediately")
+    username: Optional[str] = Field(None, description="Display name for the agent in game")
+    preferred_zone: Optional[str] = Field(None, description="Preferred zone (zone1 or zone2)")
+    zone2_left_only: bool = Field(False, description="If zone2, spawn only on left side of gate")
 
 
 class AgentState(BaseModel):
@@ -732,24 +722,16 @@ async def health_check():
 
 
 @app.post("/add-agent")
-async def add_agent(
-    program: ProgramSchema,
-    register_in_game: bool = False,
-    username: Optional[str] = None,
-    preferred_zone: Optional[str] = None
-):
+async def add_agent(request: AddAgentRequest):
     """
     Add a new agent to the backend with its Scratch-like program.
 
     The agent will start executing from the 'onStart' action block.
 
     Args:
-        program: Agent program with blocks
-        register_in_game: If True, also register the agent in the game environment
-        username: Optional display name for the agent in the game
-        preferred_zone: Optional zone preference ("zone1" or "zone2"). Defaults to zone1 if not specified.
+        request: Request containing agent_id, blocks, and optional game registration parameters
     """
-    agent_id = program.agent_id
+    agent_id = request.agent_id
 
     # Check if agent already exists
     if agent_id in agents:
@@ -757,6 +739,9 @@ async def add_agent(
             status_code=400,
             detail=f"Agent with ID '{agent_id}' already exists"
         )
+
+    # Create ProgramSchema from request
+    program = ProgramSchema(agent_id=request.agent_id, blocks=request.blocks)
 
     # Find the onStart action block
     on_start_block = None
@@ -783,12 +768,18 @@ async def add_agent(
 
     # Register in game environment if requested
     game_registration = None
-    if register_in_game:
+    if request.register_in_game:
         try:
-            game_registration = await game_client.register_agent(agent_id, username, preferred_zone)
+            game_registration = await game_client.register_agent(
+                agent_id,
+                request.username,
+                request.preferred_zone,
+                request.zone2_left_only
+            )
             game_session.registered_agents[agent_id] = True
-            zone_info = f" in {preferred_zone}" if preferred_zone else ""
-            logger.info(f"Agent {agent_id} registered in game environment{zone_info}")
+            zone_info = f" in {request.preferred_zone}" if request.preferred_zone else ""
+            left_info = " (left side only)" if request.zone2_left_only and request.preferred_zone == "zone2" else ""
+            logger.info(f"Agent {agent_id} registered in game environment{zone_info}{left_info}")
         except Exception as e:
             logger.error(f"Failed to register agent in game: {e}")
             # Don't fail the whole request, just log the error

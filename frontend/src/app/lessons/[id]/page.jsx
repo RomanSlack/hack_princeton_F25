@@ -913,6 +913,13 @@ function LessonBuilder({ lesson, config }) {
         blocks: backendBlocks,
       };
 
+      // For lesson 1, register agents in zone 2 (left side only, before the gate)
+      if (lesson.id === 1) {
+        payload.register_in_game = true;
+        payload.preferred_zone = "zone2";
+        payload.zone2_left_only = true;
+      }
+
       console.log('Deploying:', JSON.stringify(payload, null, 2));
 
       const response = await fetch(`${BACKEND_URL}/add-agent`, {

@@ -1,220 +1,214 @@
-<<<<<<< HEAD
-# GPT Agent Builder
+# Discer.io
 
-A minimal React application built with Vite and Tailwind CSS that allows you to visually design agent logic by dragging and connecting blocks on a canvas.
+### Learn Agentic AI Through Play
 
-## Features
+[![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?logo=openai&logoColor=white)](https://openai.com/)
+[![Daedalus](https://img.shields.io/badge/Daedalus-Labs-7c3aed)](https://daedaluslabs.ai/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-- **Drag and Drop Blocks**: Create agent logic by dragging blocks around the canvas
-- **Auto-Connect**: Drag blocks near each other (within 80px) to automatically create connections
-- **Editable Blocks**: Double-click any block to edit its label and description
-- **Visual Connections**: SVG arrows dynamically update when blocks move
-- **Export JSON**: Export your agent logic as JSON for further processing
-- **Clean UI**: Built with Tailwind CSS for a modern, responsive interface
+<p align="center">
+  <img src="readme_Images/Discer.io_bann2er.png" width="50%" alt="Discer.io Banner">
+</p>
 
-## Getting Started
+## Overview
+
+Discer.io is an interactive platform that teaches agentic AI concepts through a multiplayer battle royale game. Build AI agents using a visual block-based programming interface, deploy them into a live combat arena, and watch them make real-time decisions using large language models. Created for HackPrinceton Fall 2025.
+
+## Architecture
+
+The platform consists of three integrated systems:
+
+### 1. Visual Programming Interface (Frontend)
+A React-based drag-and-drop environment where users design agent behavior without writing code. Agents are composed of:
+- **Action Blocks**: Entry points (onStart, onAttacked)
+- **Agent Blocks**: LLM decision points with system/user prompts
+- **Tool Blocks**: Game actions (move, attack, collect, switch_weapon, plan, search)
+
+### 2. Agent Orchestration Backend
+FastAPI server managing agent execution with dual LLM provider support:
+- **Daedalus Mode**: Multi-provider access (OpenAI, Anthropic, Google) with MCP server integration
+- **OpenAI Mode**: Direct API calls for lower latency
+- Parallel agent execution with configurable step delays
+- Action history tracking and plan persistence
+
+### 3. Game Environment
+Real-time multiplayer battle arena built with TypeScript/Bun:
+- Physics-based bullet collision system
+- Weapon mechanics (pistols, rifles, shotguns, melee)
+- Resource management (ammo, health, XP)
+- Dynamic obstacle destruction
+- WebSocket-based multiplayer
+
+<img src="readme_Images/map.png" width="50%" alt="Game Map">
+
+## Key Features
+
+**Visual Agent Programming**
+- Scratch-like block interface with live execution visualization
+- No coding required - design complex agent behaviors through connections
+- Real-time feedback showing which blocks are actively executing
+
+**LLM-Powered Decision Making**
+- Agents use GPT-4, Claude, or Gemini to make tactical decisions
+- Game state fed to LLM with nearby agents, loot, obstacles, and ammo status
+- Supports strategic planning via MCP server integration (Daedalus mode only)
+
+**Combat Mechanics**
+- Attack action fires 2 shots with 200ms delay between shots
+- Weapon-dependent bullet count: pistol/rifle (1 bullet/shot), shotgun (8 pellets/shot)
+- Melee combat with fists when ammunition depleted
+- Obstacle line-of-sight blocking and destructible cover
+
+**Resource Scarcity**
+- Limited ammo creates strategic tension
+- Universal ammo system shared across all firearms
+- Weapon switching between slots for tactical flexibility
+
+<img src="readme_Images/web_Screenshot.png" width="50%" alt="Web Interface">
+
+## Quick Start
 
 ### Prerequisites
-
-- Node.js (v14 or higher)
-- npm or yarn
+- Node.js 18+
+- Python 3.10+
+- Bun runtime
+- OpenAI API key and/or Daedalus API key
 
 ### Installation
 
+**1. Game Environment**
 ```bash
-# Install dependencies
+cd game_environment
+bun install
+bun run dev  # Starts on http://localhost:3000
+```
+
+**2. Backend**
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with your API keys and set LLM_PROVIDER (daedalus or openai)
+python main.py  # Starts on http://localhost:8001
+```
+
+**3. Frontend**
+```bash
+cd frontend
 npm install
-
-# Start the development server
-npm run dev
-
-# Build for production
-npm run build
+npm run dev  # Starts on http://localhost:5173
 ```
 
-The app will be available at `http://localhost:5173/`
+### Configuration
 
-## How to Use
+The backend supports two LLM providers via `.env`:
 
-### Adding Blocks
+**Daedalus Labs (Default)**
+```env
+LLM_PROVIDER=daedalus
+DEDALUS_API_KEY=your_key_here
+DEFAULT_MODEL=openai/gpt-4o-mini
+```
+Supports multiple providers, MCP servers for planning/search tools.
 
-Click the colored buttons in the toolbar to add new blocks:
-- **Start**: Starting point (green)
-- **Attack**: Attack action (red)
-- **Defend**: Defense action (blue)
-- **Speak**: Communication action (purple)
+**OpenAI Direct**
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_key_here
+DEFAULT_MODEL=gpt-4o-mini
+```
+Faster, simpler, but OpenAI models only (no MCP support).
 
-### Moving Blocks
+## Usage
 
-- Click and drag any block to move it around the canvas
-- Blocks are constrained to the canvas boundaries
+1. **Design Agent**: Drag blocks in the frontend to create agent logic
+2. **Deploy**: Click "Add Agent" to register in the backend
+3. **Start Game**: Click "Register Agents" to spawn them in the arena
+4. **Auto-Step**: Enable automatic execution (configurable delay via `STEP_DELAY`)
+5. **Watch**: Observe agents making LLM-powered decisions in real-time
 
-### Creating Connections
+## Game Flow
 
-There are two ways to connect blocks:
-
-1. **Connection Mode (Recommended)**:
-   - Click the "Connect Mode" button in the toolbar (it will turn orange)
-   - Click on a source block (it will highlight with an orange ring)
-   - Move your mouse to see a live preview of the connection line
-   - Click on a target block to create the connection
-   - Click the button again to exit connection mode
-
-2. **Auto-Connect**:
-   - Drag a block near another block (within 80px)
-   - When you release, a connection arrow will automatically be created
-
-### Editing Blocks
-
-- Double-click any block to open the edit popup
-- Modify the label and description
-- Click "Save" to apply changes or "Delete" to remove the block
-- Use keyboard shortcuts:
-  - `Esc` to close the popup
-  - `Ctrl+Enter` to save changes
-
-### Deleting Connections
-
-Click on any connection arrow to delete it (a confirmation dialog will appear).
-
-### Exporting
-
-Click the "Export JSON" button to download your agent logic as a JSON file with the following structure:
-
-```json
-{
-  "nodes": [
-    {
-      "id": 1,
-      "label": "Start",
-      "description": "Starting point",
-      "position": { "x": 100, "y": 100 }
-    }
-  ],
-  "connections": [
-    { "from": 1, "to": 2 }
-  ]
-}
+```
+Frontend (Blocks) → Backend (LLM Inference) → Game Environment (Physics)
+        ↓                    ↓                         ↓
+   Visual Design      Decision Making           Combat Simulation
+        ↓                    ↓                         ↓
+        └────────────────────┴─────────────────────────┘
+                      (Continuous Loop)
 ```
 
-### Clearing the Canvas
+Each game step:
+1. Backend fetches game state for all agents
+2. LLM processes state and decides action (move/attack/collect/switch_weapon)
+3. Actions sent to game environment simultaneously
+4. Game physics updates, state changes
+5. Repeat every `STEP_DELAY` seconds
 
-Click "Clear Canvas" to remove all blocks and connections (with confirmation).
+## Attack Mechanics Deep Dive
+
+- **One attack action = 2 bullets fired** (enforced in `agentBridge.ts`)
+- Minimum 200ms between individual shots
+- Attack state persists for 3 seconds or until target changes
+- Weapon fire delay respected (pistol: 150ms, rifle: 100ms, shotgun: 900ms)
+- Auto-reload when magazine empty
+- Total bullets per attack:
+  - Pistol/Rifle: 2 bullets
+  - Shotgun: 16 pellets (2 shots × 8 pellets)
+  - Fists: 2 melee swings
 
 ## Project Structure
 
 ```
-/
-├── src/
-│   ├── components/
-│   │   ├── Block.jsx          # Draggable block component
-│   │   ├── Connections.jsx    # SVG arrow rendering
-│   │   └── Popup.jsx          # Edit dialog component
-│   ├── App.jsx                # Main application with state management
-│   ├── main.jsx               # Application entry point
-│   └── index.css              # Global styles + Tailwind directives
-├── index.html                 # HTML template
-├── tailwind.config.js         # Tailwind configuration
-├── postcss.config.js          # PostCSS configuration
-└── package.json               # Dependencies and scripts
+hack_princeton_F25/
+├── frontend/              # React visual programming interface
+│   ├── src/
+│   │   ├── components/    # Block, Connection, Canvas components
+│   │   └── App.jsx        # Main application
+├── backend/               # FastAPI agent orchestration
+│   ├── main.py            # Server with dual LLM provider support
+│   ├── game_client.py     # Game environment HTTP client
+│   └── .env.example       # Configuration template
+├── game_environment/      # TypeScript/Bun game server
+│   ├── server/src/
+│   │   ├── agentBridge.ts # Backend action → game input translation
+│   │   ├── objects/       # Player, AIAgent, Bullet classes
+│   │   └── game.ts        # Main game loop
+│   ├── client/            # Browser-based game renderer
+│   └── common/            # Shared definitions (guns, packets)
+└── readme_Images/         # Documentation assets
 ```
 
-## State Structure
+## API Endpoints
 
-The application maintains the following state:
+**Backend (`http://localhost:8001`)**
+- `POST /add-agent` - Register agent program
+- `POST /register-agents-in-game` - Spawn agents in arena
+- `POST /execute-game-step` - Execute one decision cycle
+- `POST /start-auto-stepping` - Enable continuous execution
+- `GET /game-session-status` - Current game state
 
-```javascript
-{
-  nodes: [
-    {
-      id: number,           // Unique identifier
-      label: string,        // Block label
-      description: string,  // Block description
-      x: number,           // X position on canvas
-      y: number            // Y position on canvas
-    }
-  ],
-  connections: [
-    {
-      from: number,  // Source node ID
-      to: number     // Target node ID
-    }
-  ]
-}
-```
+**Game Environment (`http://localhost:8000`)**
+- `POST /api/agent/register` - Create AI agent in game
+- `GET /api/agent/state/{agent_id}` - Get game state
+- `POST /api/agent/command` - Send action (move/attack/collect)
 
-## Extending the Application
+## Technologies
 
-This application is designed to be easily extensible. Here are some ideas:
+**Frontend**: React 19, Vite, Tailwind CSS, Lucide Icons
+**Backend**: FastAPI, Pydantic, OpenAI SDK, Daedalus SDK, AsyncIO
+**Game**: TypeScript, Bun, WebSocket, Canvas API
+**AI**: OpenAI GPT-4o, Anthropic Claude, Google Gemini (via Daedalus)
 
-### Adding New Block Types
+## Credits
 
-Edit [App.jsx](src/App.jsx) to add new block types:
+Game environment inspired by [Suroi](https://github.com/HasangerGames/suroi) - an open-source 2D battle royale. Special thanks to the Suroi team for demonstrating excellent multiplayer game architecture.
 
-```javascript
-<button onClick={() => addNode('CustomAction')}>
-  + Custom Action
-</button>
-```
-
-### Customizing Block Colors
-
-Edit [Block.jsx](src/components/Block.jsx) in the `getBlockColor` function:
-
-```javascript
-const colors = {
-  Start: 'bg-green-100 border-green-400 text-green-800',
-  CustomAction: 'bg-yellow-100 border-yellow-400 text-yellow-800',
-  // Add more...
-};
-```
-
-### AI Logic Integration
-
-You can extend the exported JSON to include AI-specific properties:
-
-```javascript
-const data = {
-  nodes: nodes.map(node => ({
-    ...node,
-    aiConfig: {
-      model: 'gpt-4',
-      temperature: 0.7,
-      systemPrompt: node.description
-    }
-  })),
-  connections
-};
-```
-
-### Adding Execution Flow
-
-Implement a traversal function to execute the agent logic:
-
-```javascript
-function executeAgent(nodes, connections) {
-  // Start from nodes with label "Start"
-  const startNodes = nodes.filter(n => n.label === 'Start');
-
-  // Traverse connections and execute each node
-  // Your AI logic here...
-}
-```
-
-## Technologies Used
-
-- **React 19**: UI framework
-- **Vite**: Build tool and dev server
-- **Tailwind CSS**: Utility-first CSS framework
-- **SVG**: Vector graphics for connections
+Built for HackPrinceton Fall 2025.
 
 ## License
 
 MIT
-
-## Contributing
-
-Feel free to submit issues and pull requests!
-=======
-# hack_princeton_F25 
->>>>>>> 2e1a46ba4f8a8aeb7539c184b134ac4c2ae2f143
