@@ -220,7 +220,7 @@ export default function AgentGameBuilder() {
                   fromBlockId: toolBlock,
                   toBlockId: newNode,
                   startTime: Date.now(),
-                  delay: 300 // Start after 300ms
+                  delay: 400 // Start after first animation completes (400ms)
                 });
               } else if (nodeChanged && prevNode && newNode) {
                 console.log(`🎬 Animation: ${prevNode} → ${newNode}`);
@@ -1106,19 +1106,52 @@ export default function AgentGameBuilder() {
                   return null; // Skip if no connection exists
                 }
 
-                const from = getBlockCenter(transition.fromBlockId);
-                const to = getBlockCenter(transition.toBlockId);
-                const midX = (from.x + to.x) / 2;
-                const midY = (from.y + to.y) / 2;
+                // Use edge-based connection points (same as arrows)
+                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
+                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+                const toExtended = extendToArrowheadTip(to, to.edge);
 
-                // Create the same path as the connection
-                const pathD = `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${to.x} ${to.y}`;
+                // Extend the path into the blocks based on edge direction
+                const extendDistance = 40; // Pixels to extend into the block
+                let fromExtended = { ...from };
+                let toExtendedIntoBlock = { ...toExtended };
 
-                // Determine color based on theme
-                const particleColor = theme.isDark ? '#ffff00' : '#d97706';
+                // Extend start point INTO source block (opposite direction of edge)
+                switch (from.edge) {
+                  case 'right': fromExtended.x -= extendDistance; break;  // Go left into block
+                  case 'left': fromExtended.x += extendDistance; break;   // Go right into block
+                  case 'bottom': fromExtended.y -= extendDistance; break; // Go up into block
+                  case 'top': fromExtended.y += extendDistance; break;    // Go down into block
+                }
 
-                // Calculate animation duration (shorter for multi-step)
-                const duration = transition.delay > 0 ? '0.3s' : '0.3s';
+                // Extend end point INTO destination block (into block interior)
+                switch (to.edge) {
+                  case 'right': toExtendedIntoBlock.x -= extendDistance; break;  // Go left into block
+                  case 'left': toExtendedIntoBlock.x += extendDistance; break;   // Go right into block
+                  case 'bottom': toExtendedIntoBlock.y -= extendDistance; break; // Go up into block
+                  case 'top': toExtendedIntoBlock.y += extendDistance; break;    // Go down into block
+                }
+
+                const midX = (from.x + toExtended.x) / 2;
+                const midY = (from.y + toExtended.y) / 2;
+
+                // Determine curve shape based on connection edge (same logic as connections)
+                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
+                let pathD;
+
+                if (isVerticalConnection) {
+                  // Vertical-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                } else {
+                  // Horizontal-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                }
+
+                // Blue particle color
+                const particleColor = '#3b82f6';
+
+                // Calculate animation duration (400ms to match delay)
+                const duration = '0.4s';
 
                 // Use CSS offset-path to follow the curved path
                 const keyframeName = `move-${transition.id}`;
@@ -1167,19 +1200,52 @@ export default function AgentGameBuilder() {
                   return null; // Skip if no connection exists
                 }
 
-                const from = getBlockCenter(transition.fromBlockId);
-                const to = getBlockCenter(transition.toBlockId);
-                const midX = (from.x + to.x) / 2;
-                const midY = (from.y + to.y) / 2;
+                // Use edge-based connection points (same as arrows)
+                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
+                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+                const toExtended = extendToArrowheadTip(to, to.edge);
 
-                // Create the same path as the connection
-                const pathD = `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${to.x} ${to.y}`;
+                // Extend the path into the blocks based on edge direction
+                const extendDistance = 40; // Pixels to extend into the block
+                let fromExtended = { ...from };
+                let toExtendedIntoBlock = { ...toExtended };
 
-                // Determine color based on theme
-                const particleColor = theme.isDark ? '#ffff00' : '#d97706';
+                // Extend start point INTO source block (opposite direction of edge)
+                switch (from.edge) {
+                  case 'right': fromExtended.x -= extendDistance; break;  // Go left into block
+                  case 'left': fromExtended.x += extendDistance; break;   // Go right into block
+                  case 'bottom': fromExtended.y -= extendDistance; break; // Go up into block
+                  case 'top': fromExtended.y += extendDistance; break;    // Go down into block
+                }
 
-                // Calculate animation duration (shorter for multi-step)
-                const duration = transition.delay > 0 ? '0.3s' : '0.3s';
+                // Extend end point INTO destination block (into block interior)
+                switch (to.edge) {
+                  case 'right': toExtendedIntoBlock.x -= extendDistance; break;  // Go left into block
+                  case 'left': toExtendedIntoBlock.x += extendDistance; break;   // Go right into block
+                  case 'bottom': toExtendedIntoBlock.y -= extendDistance; break; // Go up into block
+                  case 'top': toExtendedIntoBlock.y += extendDistance; break;    // Go down into block
+                }
+
+                const midX = (from.x + toExtended.x) / 2;
+                const midY = (from.y + toExtended.y) / 2;
+
+                // Determine curve shape based on connection edge (same logic as connections)
+                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
+                let pathD;
+
+                if (isVerticalConnection) {
+                  // Vertical-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                } else {
+                  // Horizontal-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                }
+
+                // Blue particle color
+                const particleColor = '#3b82f6';
+
+                // Calculate animation duration (400ms to match delay)
+                const duration = '0.4s';
 
                 // Use CSS offset-path to follow the curved path
                 const keyframeName = `move-${transition.id}`;
