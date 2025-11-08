@@ -294,7 +294,7 @@ async def execute_agent_block(
         f"{agent_block.user_prompt}\n\n"
         f"Current game state: {game_state_str}\n\n"
         f"Available actions:\n" + "\n".join(f"- {info}" for info in available_tools_info) + "\n\n"
-        f"Respond with a JSON object containing 'action' (the action name) and 'parameters' (an object with the required parameters).\n"
+        f"Respond with nothing but a JSON object containing 'action' (the action name) and 'parameters' (an object with the required parameters). Note the move tool takes in *relative* coordinates, and you can't move outside the box given by (-250, -250) and (250, 250).\n"
         f"Example: {{\"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -2}}}}"
     )
 
@@ -444,7 +444,17 @@ async def register_agents_in_game():
 
     # Register all agents that aren't already registered
     registration_results = {}
+    agent_programs = {}
+
     for agent_id in agents.keys():
+        agent_state = agents[agent_id]
+
+        # Store the agent program data for frontend visualization
+        agent_programs[agent_id] = {
+            "blocks": [block.dict() for block in agent_state.program.blocks],
+            "agent_id": agent_id
+        }
+
         if agent_id not in game_session.registered_agents:
             try:
                 result = await game_client.register_agent(agent_id, f"AI_{agent_id}")
@@ -469,7 +479,8 @@ async def register_agents_in_game():
     return {
         "success": True,
         "agents_registered": len(game_session.registered_agents),
-        "registration_results": registration_results
+        "registration_results": registration_results,
+        "agent_programs": agent_programs
     }
 
 
@@ -687,6 +698,27 @@ async def get_game_session_status():
         "agents_in_backend": len(agents),
         "agents_in_game": len(game_session.registered_agents),
         "game_server_status": game_status
+    }
+
+
+@app.get("/agents-state")
+async def get_agents_state():
+    """
+    Get current execution state for all agents.
+    Returns the current node being executed for each agent.
+    """
+    agent_states = {}
+    for agent_id, agent_state in agents.items():
+        agent_states[agent_id] = {
+            "agent_id": agent_id,
+            "current_node": agent_state.current_node,
+        }
+
+    return {
+        "success": True,
+        "agents": agent_states,
+        "session_active": game_session.active,
+        "step_count": game_session.step_count
     }
 
 

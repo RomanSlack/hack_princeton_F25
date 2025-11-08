@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suroi Simplified</title>
     <link rel="stylesheet" href="/public/css/style.css">
+    <style>
+        /* Active node highlighting for flowchart */
+        .active-node {
+            box-shadow: 0 0 20px 5px rgba(255, 255, 0, 0.8) !important;
+            border: 3px solid #ffff00 !important;
+            transform: scale(1.05) !important;
+            z-index: 100 !important;
+        }
+
+        .active-node::before {
+            content: '▶';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #ffff00;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
 </head>
 <body>
     <div id="game-container">
