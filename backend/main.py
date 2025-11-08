@@ -444,7 +444,17 @@ async def register_agents_in_game():
 
     # Register all agents that aren't already registered
     registration_results = {}
+    agent_programs = {}
+
     for agent_id in agents.keys():
+        agent_state = agents[agent_id]
+
+        # Store the agent program data for frontend visualization
+        agent_programs[agent_id] = {
+            "blocks": [block.dict() for block in agent_state.program.blocks],
+            "agent_id": agent_id
+        }
+
         if agent_id not in game_session.registered_agents:
             try:
                 result = await game_client.register_agent(agent_id, f"AI_{agent_id}")
@@ -469,7 +479,8 @@ async def register_agents_in_game():
     return {
         "success": True,
         "agents_registered": len(game_session.registered_agents),
-        "registration_results": registration_results
+        "registration_results": registration_results,
+        "agent_programs": agent_programs
     }
 
 
