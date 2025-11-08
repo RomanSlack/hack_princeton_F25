@@ -64,6 +64,10 @@ class ToolBlock(BaseModel):
     tool_type: Literal["move", "attack", "collect", "plan"] = Field(
         ..., description="Type of tool action"
     )
+    parameters: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Parameter schema for this tool. Key is parameter name, value is type description (e.g., {'x': 'number', 'y': 'number'})"
+    )
     next: Optional[str] = Field(
         None, description="ID of the next block to execute (can be null)"
     )
@@ -219,11 +223,12 @@ def game_state_to_llm_format(game_state: GameState) -> str:
 
 async def execute_agent_block(
     agent_block: AgentBlock,
-    game_state: GameState
-) -> str:
+    game_state: GameState,
+    all_blocks: List[Block]
+) -> tuple[str, Dict[str, Any]]:
     """
     Execute an agent block using Dedalus SDK to decide which tool to use.
-    Returns the tool name that the agent decided to use.
+    Returns a tuple of (tool_name, parameters).
     """
     logger.info(f"Executing agent block: {agent_block.id}")
 
@@ -231,12 +236,34 @@ async def execute_agent_block(
     game_state_str = game_state_to_llm_format(game_state)
     logger.info(f"Game state: {game_state_str}")
 
-    # Get available tools from the agent block
+    # Build a map of tool blocks and their parameter schemas
+    tool_blocks_map = {}
+    for block in all_blocks:
+        if isinstance(block, ToolBlock):
+            tool_blocks_map[block.id] = block
+
+    # Get available tools with their parameter schemas
+    available_tools_info = []
+    for conn in agent_block.tool_connections:
+        tool_block = tool_blocks_map.get(conn.tool_id)
+        if tool_block:
+            if tool_block.parameters:
+                param_desc = ", ".join([f"{k}: {v}" for k, v in tool_block.parameters.items()])
+                available_tools_info.append(f"{conn.tool_name} (parameters: {param_desc})")
+            else:
+                available_tools_info.append(f"{conn.tool_name} (no parameters)")
+
     available_tools = [conn.tool_name for conn in agent_block.tool_connections]
     logger.info(f"Available tools: {', '.join(available_tools)}")
 
     # Construct the input prompt
-    user_input = f"{agent_block.user_prompt}\n\nCurrent game state: {game_state_str}\n\nAvailable actions: {', '.join(available_tools)}\n\nRespond with ONLY the name of the action you want to take."
+    user_input = (
+        f"{agent_block.user_prompt}\n\n"
+        f"Current game state: {game_state_str}\n\n"
+        f"Available actions:\n" + "\n".join(f"- {info}" for info in available_tools_info) + "\n\n"
+        f"Respond with a JSON object containing 'action' (the action name) and 'parameters' (an object with the required parameters).\n"
+        f"Example: {{\"action\": \"move\", \"parameters\": {{\"x\": 5, \"y\": -2}}}}"
+    )
 
     full_input = agent_block.system_prompt + "\n\n" + user_input
     logger.info(f"LLM Input:\n{full_input}")
@@ -249,19 +276,31 @@ async def execute_agent_block(
         #system=agent_block.system_prompt # TODO: how do I pass system messages in Dedalus??
     )
 
-    # Extract the tool name from the response
+    # Extract the tool name and parameters from the response
     logger.info(f"LLM Raw Output: {response.final_output}")
-    tool_choice = response.final_output.strip().lower()
+
+    # Try to parse JSON response
+    import json
+    try:
+        response_json = json.loads(response.final_output.strip())
+        tool_choice = response_json.get("action", "").lower()
+        parameters = response_json.get("parameters", {})
+    except json.JSONDecodeError:
+        logger.warning(f"Failed to parse JSON response, attempting fallback parsing")
+        # Fallback: try to extract just the tool name
+        tool_choice = response.final_output.strip().lower()
+        parameters = {}
 
     # Validate that the chosen tool is in the available tools
     if tool_choice not in available_tools:
         logger.warning(f"LLM chose invalid tool '{tool_choice}', defaulting to '{available_tools[0]}'")
         # Default to the first available tool if the response is invalid
         tool_choice = available_tools[0]
+        parameters = {}
 
-    logger.info(f"Selected tool: {tool_choice}")
+    logger.info(f"Selected tool: {tool_choice} with parameters: {parameters}")
 
-    return tool_choice
+    return tool_choice, parameters
 
 
 # Endpoints
@@ -390,7 +429,11 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
         )
 
     # Execute the agent block using Dedalus
-    tool_choice = await execute_agent_block(current_block, request.game_state)
+    tool_choice, parameters = await execute_agent_block(
+        current_block,
+        request.game_state,
+        agent_state.program.blocks
+    )
 
     # Find the tool block corresponding to the chosen tool
     chosen_tool_block = None
@@ -415,7 +458,7 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
     # Create the action response
     action = ToolAction(
         tool_type=tool_choice,
-        parameters={}  # Parameters would come from the LLM response in a more advanced implementation
+        parameters=parameters
     )
 
     return NextStepResponse(

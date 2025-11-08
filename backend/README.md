@@ -74,12 +74,14 @@ curl -X POST http://localhost:8000/add-agent \
       "id": "move_tool",
       "type": "tool",
       "tool_type": "move",
+      "parameters": {"x": "number", "y": "number"},
       "next": "decide_action"
     },
     {
       "id": "attack_tool",
       "type": "tool",
       "tool_type": "attack",
+      "parameters": {"target_player_id": "string"},
       "next": "decide_action"
     }
   ]
@@ -143,30 +145,35 @@ curl -X POST http://localhost:8000/add-agent \
       "id": "move_1",
       "type": "tool",
       "tool_type": "move",
+      "parameters": {"x": "number", "y": "number"},
       "next": "explore_agent"
     },
     {
       "id": "move_2",
       "type": "tool",
       "tool_type": "move",
+      "parameters": {"x": "number", "y": "number"},
       "next": "explore_agent"
     },
     {
       "id": "collect_1",
       "type": "tool",
       "tool_type": "collect",
+      "parameters": {},
       "next": "explore_agent"
     },
     {
       "id": "plan_1",
       "type": "tool",
       "tool_type": "plan",
+      "parameters": {},
       "next": "explore_agent"
     },
     {
       "id": "attack_1",
       "type": "tool",
       "tool_type": "attack",
+      "parameters": {"target_player_id": "string"},
       "next": null
     }
   ]
@@ -261,7 +268,10 @@ curl -X POST http://localhost:8000/next-step-for-agents \
   "agent_id": "player_123",
   "action": {
     "tool_type": "move",
-    "parameters": {}
+    "parameters": {
+      "x": 5,
+      "y": -2
+    }
   },
   "current_node": "decide_action"
 }
@@ -293,7 +303,9 @@ curl -X POST http://localhost:8000/next-step-for-agents \
   "agent_id": "player_456",
   "action": {
     "tool_type": "attack",
-    "parameters": {}
+    "parameters": {
+      "target_player_id": "attacker_1"
+    }
   },
   "current_node": "explore_agent"
 }
@@ -303,7 +315,14 @@ curl -X POST http://localhost:8000/next-step-for-agents \
 - The `game_state` field is flexible and can contain any fields your game needs
 - The `action_occurred` field is optional and currently supports `"attacked"`
 - The LLM will choose which tool to use based on the game state and available tools
+- The LLM also generates appropriate parameters for the chosen tool based on the parameter schema
 - The agent's `current_node` is automatically updated after execution
+
+**Tool Parameter Requirements:**
+- `move`: Requires `x` (number) and `y` (number) - relative coordinates for movement
+- `attack`: Requires `target_player_id` (string) - ID of the player to attack
+- `collect`: No parameters required
+- `plan`: No parameters required
 
 ## Block Types
 
@@ -315,15 +334,17 @@ Entry points for agent execution:
 ### Agent Block
 Makes LLM-based decisions:
 - Calls the specified model with system and user prompts
-- Returns which tool to execute
+- Returns which tool to execute with appropriate parameters
 - Can connect to multiple tool blocks (conditional branching)
+- The LLM receives parameter schemas for each available tool
 
 ### Tool Block
-Executes game actions:
-- `move`: Move the agent
-- `attack`: Attack another agent
-- `collect`: Collect resources
-- `plan`: Strategic planning
+Executes game actions with optional parameters:
+- `move`: Move the agent (requires x, y coordinates)
+- `attack`: Attack another agent (requires target_player_id)
+- `collect`: Collect resources (no parameters)
+- `plan`: Strategic planning (no parameters)
+- Each tool block defines its parameter schema using the `parameters` field
 
 ## Schema Notes
 
@@ -333,3 +354,5 @@ Executes game actions:
 - Tool and action blocks can only connect to one next block
 - Agent blocks can connect to multiple tool blocks for branching logic
 - Cycles are supported (e.g., tool � agent � tool creates a loop)
+- Tool blocks can define parameter schemas (key-value pairs where key is parameter name and value is type description)
+- The LLM will generate parameter values based on the game state and parameter schemas
