@@ -43,7 +43,7 @@ export class Gun {
         this.reloadStartTime = now;
     }
 
-    update(now: number, totalAmmo: number): void {
+    update(now: number, totalAmmo: number): number {
         if (this.reloading && (now - this.reloadStartTime) >= this.definition.reloadTime) {
             const needed = this.definition.capacity - this.ammo;
             const toLoad = Math.min(needed, totalAmmo);

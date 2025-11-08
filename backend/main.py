@@ -321,8 +321,13 @@ class GameState(BaseModel):
     agent_id: Optional[str] = None
     position: Optional[Dict[str, float]] = None
     health: Optional[float] = None
+    max_health: Optional[float] = None
     nearby_agents: Optional[List[Dict[str, Any]]] = None
     inventory: Optional[List[str]] = None
+    ammo: Optional[Dict[str, int]] = None
+    weapon_state: Optional[Dict[str, Any]] = None
+    xp: Optional[int] = None
+    level: Optional[int] = None
 
 
 class NextStepRequest(BaseModel):

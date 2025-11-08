@@ -337,12 +337,12 @@ export class Player extends GameObject {
         this.maxHealth = GameConstants.PLAYER_MAX_HEALTH * healthMultiplier;
         this.xp = 0; // Reset XP to 0
 
-        // Reset weapons and ammo
+        // Reset weapons and ammo - limited starting ammo
         this.weapons = [null, null];
         this.activeWeaponIndex = 0;
         this.addWeapon("fists");
         this.addWeapon("pistol");
-        this.ammo.set("9mm", 45);
+        this.ammo.set("9mm", 15); // Only 1 magazine worth
         this.ammo.set("556mm", 0);
         this.ammo.set("12g", 0);
 

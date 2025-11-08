@@ -214,9 +214,8 @@ export class HUD {
             font-size: 14px;
             z-index: 100;
             border: 2px solid rgba(255, 215, 0, 0.6);
-            min-width: 280px;
-            max-height: 400px;
-            overflow-y: auto;
+            min-width: 300px;
+            max-width: 320px;
             display: none;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
         `;
@@ -234,64 +233,96 @@ export class HUD {
         `;
         title.textContent = '🏆 LEADERBOARD';
 
-        // Entries container
-        const entries = document.createElement('div');
-        entries.id = 'leaderboard-entries';
-        entries.style.cssText = `
+        // Top 3 container (fixed, always visible)
+        const top3Container = document.createElement('div');
+        top3Container.id = 'leaderboard-top3';
+        top3Container.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        `;
+
+        // Scrollable rest container
+        const restContainer = document.createElement('div');
+        restContainer.id = 'leaderboard-rest';
+        restContainer.style.cssText = `
             display: flex;
             flex-direction: column;
             gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         `;
 
+        // Custom scrollbar styling
+        restContainer.style.scrollbarWidth = 'thin';
+        restContainer.style.scrollbarColor = 'rgba(255, 215, 0, 0.5) rgba(0, 0, 0, 0.3)';
+
         container.appendChild(title);
-        container.appendChild(entries);
+        container.appendChild(top3Container);
+        container.appendChild(restContainer);
         document.body.appendChild(container);
 
         return container;
     }
 
     updateLeaderboard(players: Array<{ id: number; username: string; xp: number; level: number; dead: boolean }>): void {
-        const entries = document.getElementById('leaderboard-entries');
-        if (!entries) return;
+        const top3Container = document.getElementById('leaderboard-top3');
+        const restContainer = document.getElementById('leaderboard-rest');
+        if (!top3Container || !restContainer) return;
 
         // Sort players by XP (descending)
         const sorted = [...players].sort((a, b) => (b.xp || 0) - (a.xp || 0));
 
         // Clear existing entries
-        entries.innerHTML = '';
+        top3Container.innerHTML = '';
+        restContainer.innerHTML = '';
 
-        // Create entry for each player
-        sorted.forEach((player, index) => {
+        // Helper function to create player entry
+        const createEntry = (player: any, index: number) => {
+            const isTop3 = index < 3;
             const entry = document.createElement('div');
+
+            // Different styling for top 3 vs rest
+            const backgrounds = ['rgba(255, 215, 0, 0.2)', 'rgba(192, 192, 192, 0.15)', 'rgba(205, 127, 50, 0.15)'];
+            const borders = ['rgba(255, 215, 0, 0.5)', 'rgba(192, 192, 192, 0.4)', 'rgba(205, 127, 50, 0.4)'];
+
             entry.style.cssText = `
-                padding: 8px 10px;
-                background: ${index === 0 ? 'rgba(255, 215, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)'};
-                border-radius: 6px;
+                padding: ${isTop3 ? '10px 12px' : '6px 8px'};
+                background: ${isTop3 && index < 3 ? backgrounds[index] : 'rgba(255, 255, 255, 0.05)'};
+                border-radius: 8px;
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 transition: all 0.3s ease;
-                border: 1px solid ${index === 0 ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 255, 255, 0.1)'};
+                border: 2px solid ${isTop3 && index < 3 ? borders[index] : 'rgba(255, 255, 255, 0.1)'};
                 ${player.dead ? 'opacity: 0.5;' : ''}
+                ${isTop3 ? 'box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);' : ''}
             `;
 
-            // Rank/Crown
+            // Rank/Medal/Crown
             const rank = document.createElement('span');
+            const medals = ['👑', '🥈', '🥉'];
             rank.style.cssText = `
-                font-size: ${index === 0 ? '20px' : '16px'};
+                font-size: ${isTop3 ? '22px' : '14px'};
                 font-weight: bold;
-                min-width: 30px;
+                min-width: ${isTop3 ? '35px' : '25px'};
                 text-align: center;
             `;
-            rank.textContent = index === 0 ? '👑' : `#${index + 1}`;
+            rank.textContent = index < 3 ? medals[index] : `#${index + 1}`;
 
             // Player name
             const name = document.createElement('span');
             name.style.cssText = `
                 flex: 1;
-                font-weight: ${index === 0 ? 'bold' : 'normal'};
-                color: ${index === 0 ? '#FFD700' : '#FFFFFF'};
-                font-size: ${index === 0 ? '15px' : '13px'};
+                font-weight: ${isTop3 ? 'bold' : 'normal'};
+                color: ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : '#FFFFFF'};
+                font-size: ${isTop3 ? '15px' : '12px'};
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             `;
             name.textContent = player.username + (player.dead ? ' ☠️' : '');
 
@@ -299,19 +330,42 @@ export class HUD {
             const xp = document.createElement('span');
             xp.style.cssText = `
                 font-weight: bold;
-                color: ${index === 0 ? '#FFD700' : '#87CEEB'};
-                font-size: ${index === 0 ? '14px' : '12px'};
-                background: rgba(0, 0, 0, 0.3);
-                padding: 2px 6px;
+                color: ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : '#87CEEB'};
+                font-size: ${isTop3 ? '13px' : '11px'};
+                background: rgba(0, 0, 0, 0.4);
+                padding: 3px 7px;
                 border-radius: 4px;
+                min-width: ${isTop3 ? '60px' : '50px'};
+                text-align: center;
             `;
             xp.textContent = `${player.xp || 0} XP`;
 
             entry.appendChild(rank);
             entry.appendChild(name);
             entry.appendChild(xp);
-            entries.appendChild(entry);
+
+            return entry;
+        };
+
+        // Populate top 3 (fixed section)
+        sorted.slice(0, 3).forEach((player, index) => {
+            top3Container.appendChild(createEntry(player, index));
         });
+
+        // Populate rest (scrollable section)
+        if (sorted.length > 3) {
+            sorted.slice(3).forEach((player, index) => {
+                restContainer.appendChild(createEntry(player, index + 3));
+            });
+        } else {
+            // Hide the scrollable section if there are 3 or fewer players
+            restContainer.style.display = 'none';
+        }
+
+        // Show scrollable section if needed
+        if (sorted.length > 3) {
+            restContainer.style.display = 'flex';
+        }
     }
 
     showLeaderboard(): void {
