@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import toast, { Toaster } from 'react-hot-toast';
 import Link from 'next/link';
+import { Book } from 'lucide-react';
 
 // Import lesson data from shared file
 import { LESSONS } from '../../../data/lessons';
@@ -1174,10 +1175,10 @@ function LessonBuilder({ lesson, config }) {
                   className={`px-4 py-3 border-b ${theme.border.primary} flex items-center justify-between hover:${theme.bg.hover} transition-colors flex-shrink-0`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg ${
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                       theme.isDark ? 'bg-blue-600' : 'bg-blue-500'
                     }`}>
-                      🤖
+                      <Book className="w-5 h-5 text-white" />
                     </div>
                     <div className="text-left">
                       <h3 className={`text-sm font-semibold ${theme.text.primary}`}>
@@ -1210,63 +1211,32 @@ function LessonBuilder({ lesson, config }) {
                 {chatMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {msg.sender === 'teacher' && (
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xl ${
-                        theme.isDark ? 'bg-blue-600' : 'bg-blue-500'
-                      }`}>
-                        {msg.avatar}
-                      </div>
-                    )}
-                    <div className={`flex flex-col max-w-[75%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-sm font-medium ${theme.text.primary}`}>{msg.name}</span>
-                        <span className={`text-xs ${theme.text.tertiary}`}>{msg.timestamp}</span>
-                      </div>
-                      <div
-                        className={`rounded-lg px-4 py-2.5 ${
-                          msg.sender === 'user'
-                            ? theme.isDark 
-                              ? 'bg-dark-bg-tertiary' 
-                              : 'bg-blue-100'
-                            : theme.isDark
-                              ? 'bg-dark-bg-tertiary'
-                              : 'bg-slate-100'
-                        } ${theme.text.primary}`}
-                      >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-                      </div>
+                    <div
+                      className={`rounded-lg px-4 py-2.5 max-w-[75%] ${
+                        msg.sender === 'user'
+                          ? theme.isDark 
+                            ? 'bg-dark-bg-tertiary' 
+                            : 'bg-blue-100'
+                          : theme.isDark
+                            ? 'bg-dark-bg-tertiary'
+                            : 'bg-slate-100'
+                      } ${theme.text.primary}`}
+                    >
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
                     </div>
-                    {msg.sender === 'user' && (
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-semibold ${
-                        theme.isDark ? 'bg-red-600 text-white' : 'bg-red-500 text-white'
-                      }`}>
-                        {msg.avatar}
-                      </div>
-                    )}
                   </div>
                 ))}
                 {isTyping && (
-                  <div className="flex gap-3 justify-start">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xl ${
-                      theme.isDark ? 'bg-blue-600' : 'bg-blue-500'
+                  <div className="flex justify-start">
+                    <div className={`rounded-lg px-4 py-2.5 ${
+                      theme.isDark ? 'bg-dark-bg-tertiary' : 'bg-slate-100'
                     }`}>
-                      🤖
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-sm font-medium ${theme.text.primary}`}>discer</span>
-                        <span className={`text-xs ${theme.text.tertiary}`}>Typing...</span>
-                      </div>
-                      <div className={`rounded-lg px-4 py-2.5 ${
-                        theme.isDark ? 'bg-dark-bg-tertiary' : 'bg-slate-100'
-                      }`}>
-                        <div className="flex gap-1">
-                          <div className={`w-2 h-2 rounded-full animate-bounce ${theme.isDark ? 'bg-gray-400' : 'bg-gray-500'}`} style={{ animationDelay: '0ms' }}></div>
-                          <div className={`w-2 h-2 rounded-full animate-bounce ${theme.isDark ? 'bg-gray-400' : 'bg-gray-500'}`} style={{ animationDelay: '150ms' }}></div>
-                          <div className={`w-2 h-2 rounded-full animate-bounce ${theme.isDark ? 'bg-gray-400' : 'bg-gray-500'}`} style={{ animationDelay: '300ms' }}></div>
-                        </div>
+                      <div className="flex gap-1">
+                        <div className={`w-2 h-2 rounded-full animate-bounce ${theme.isDark ? 'bg-gray-400' : 'bg-gray-500'}`} style={{ animationDelay: '0ms' }}></div>
+                        <div className={`w-2 h-2 rounded-full animate-bounce ${theme.isDark ? 'bg-gray-400' : 'bg-gray-500'}`} style={{ animationDelay: '150ms' }}></div>
+                        <div className={`w-2 h-2 rounded-full animate-bounce ${theme.isDark ? 'bg-gray-400' : 'bg-gray-500'}`} style={{ animationDelay: '300ms' }}></div>
                       </div>
                     </div>
                   </div>
