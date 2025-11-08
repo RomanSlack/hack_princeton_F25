@@ -111,8 +111,13 @@ export default function AgentGameBuilder() {
 
   const blockIdCounter = useRef(0);
 
-  // State for tracking current executing nodes
+  // State for tracking current executing nodes and last executed tools
+  // Format: { agentId: { currentNode: "block-id", lastTool: "tool-id" } }
   const [currentNodes, setCurrentNodes] = useState({});
+  const prevCurrentNodes = useRef({});
+
+  // State for tracking active transition animations
+  const [animatingTransitions, setAnimatingTransitions] = useState([]);
 
   // Load from localStorage only on client side after mount
   useEffect(() => {
@@ -173,13 +178,80 @@ export default function AgentGameBuilder() {
         const response = await fetch(`${BACKEND_URL}/agents-state`);
         if (response.ok) {
           const data = await response.json();
+
           if (data.agents) {
-            // Update current nodes for all agents
+            // Detect transitions and create animations BEFORE updating state
+            const newTransitions = [];
+
+            Object.entries(data.agents).forEach(([agentId, state]) => {
+              const prevData = prevCurrentNodes.current[agentId];
+              const prevNode = prevData?.currentNode;
+              const newNode = state.current_node;
+              const toolBlock = state.last_executed_tool_block;
+              const lastAgentBlock = state.last_agent_block;
+
+              // Check if we should animate
+              // We animate when the current node changed from what we tracked before
+              const nodeChanged = prevNode !== newNode;
+
+              // Only animate if:
+              // 1. The node changed from what we had before
+              // 2. We have complete path information
+              if (nodeChanged && lastAgentBlock && toolBlock && newNode) {
+                console.log(`🎬 Animation: ${lastAgentBlock} → ${toolBlock} → ${newNode}`);
+
+                // Multi-step animation: last agent → tool → current agent
+                // First animation: previous agent block → tool block
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}-1`,
+                  agentId,
+                  fromBlockId: lastAgentBlock,
+                  toBlockId: toolBlock,
+                  startTime: Date.now(),
+                  delay: 0 // Start immediately
+                });
+
+                // Second animation: tool block → current agent block
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}-2`,
+                  agentId,
+                  fromBlockId: toolBlock,
+                  toBlockId: newNode,
+                  startTime: Date.now(),
+                  delay: 300 // Start after 300ms
+                });
+              } else if (nodeChanged && prevNode && newNode) {
+                console.log(`🎬 Animation: ${prevNode} → ${newNode}`);
+
+                // Single-step animation: direct connection (no tool block info)
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}`,
+                  agentId,
+                  fromBlockId: prevNode,
+                  toBlockId: newNode,
+                  startTime: Date.now(),
+                  delay: 0
+                });
+              }
+            });
+
+            // Add new transitions to state
+            if (newTransitions.length > 0) {
+              setAnimatingTransitions(prev => [...prev, ...newTransitions]);
+            }
+
+            // Update current nodes state for next poll
             const newCurrentNodes = {};
             Object.entries(data.agents).forEach(([agentId, state]) => {
-              newCurrentNodes[agentId] = state.current_node;
+              newCurrentNodes[agentId] = {
+                currentNode: state.current_node,
+                lastTool: state.last_executed_tool_block,
+                lastAgentBlock: state.last_agent_block
+              };
             });
+
             setCurrentNodes(newCurrentNodes);
+            prevCurrentNodes.current = newCurrentNodes;
           }
         }
       } catch (error) {
@@ -190,6 +262,35 @@ export default function AgentGameBuilder() {
 
     return () => clearInterval(pollInterval);
   }, [isClient]);
+
+  // Cleanup completed transition animations
+  useEffect(() => {
+    if (animatingTransitions.length === 0) return;
+
+    const SINGLE_ANIMATION_DURATION = 300; // milliseconds per animation step
+    const now = Date.now();
+
+    // Check if any animations have completed
+    // Each animation completes at: startTime + delay + duration
+    const hasCompletedAnimations = animatingTransitions.some(
+      transition => now - transition.startTime >= transition.delay + SINGLE_ANIMATION_DURATION
+    );
+
+    if (hasCompletedAnimations) {
+      // Remove completed animations
+      const timeout = setTimeout(() => {
+        setAnimatingTransitions(prev =>
+          prev.filter(transition => {
+            const elapsed = Date.now() - transition.startTime;
+            const completionTime = transition.delay + SINGLE_ANIMATION_DURATION;
+            return elapsed < completionTime;
+          })
+        );
+      }, SINGLE_ANIMATION_DURATION);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [animatingTransitions]);
 
   // Zoom controls
   const handleZoomIn = () => {
@@ -836,6 +937,67 @@ export default function AgentGameBuilder() {
                 />
               )}
 
+              {/* Animated transition particles */}
+              {animatingTransitions.map(transition => {
+                // Find the connection between from and to blocks
+                const connection = connections.find(
+                  conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
+                );
+
+                if (!connection) {
+                  console.warn(`⚠️ No connection found for transition: ${transition.fromBlockId} → ${transition.toBlockId}`);
+                  return null; // Skip if no connection exists
+                }
+
+                const from = getBlockCenter(transition.fromBlockId);
+                const to = getBlockCenter(transition.toBlockId);
+                const midX = (from.x + to.x) / 2;
+                const midY = (from.y + to.y) / 2;
+
+                // Create the same path as the connection
+                const pathD = `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${to.x} ${to.y}`;
+
+                // Determine color based on theme
+                const particleColor = theme.isDark ? '#ffff00' : '#d97706';
+
+                // Calculate animation duration (shorter for multi-step)
+                const duration = transition.delay > 0 ? '0.3s' : '0.3s';
+
+                // Use CSS offset-path to follow the curved path
+                const keyframeName = `move-${transition.id}`;
+
+                return (
+                  <g key={transition.id}>
+                    <style>
+                      {`
+                        @keyframes ${keyframeName} {
+                          0% {
+                            offset-distance: 0%;
+                          }
+                          100% {
+                            offset-distance: 100%;
+                          }
+                        }
+                      `}
+                    </style>
+
+                    {/* Animated particle following the curved path */}
+                    <circle
+                      r="10"
+                      fill={particleColor}
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${particleColor})`,
+                        opacity: 0.9,
+                        offsetPath: `path('${pathD}')`,
+                        animation: `${keyframeName} ${duration} ease-in-out ${transition.delay}ms forwards`
+                      }}
+                      cx="0"
+                      cy="0"
+                    />
+                  </g>
+                );
+              })}
+
               {/* Arrowhead marker */}
               <defs>
                 <marker
@@ -854,7 +1016,7 @@ export default function AgentGameBuilder() {
             {/* Blocks */}
             {blocks.map(block => {
               // Check if this block is currently executing for THIS agent (matching agentId)
-              const isExecuting = agentId && currentNodes[agentId] === block.id;
+              const isExecuting = agentId && currentNodes[agentId]?.currentNode === block.id;
 
               // Colors based on theme - darker yellow for light mode for better contrast
               const highlightColor = theme.isDark ? '#ffff00' : '#d97706'; // Bright yellow for dark, amber-600 for light

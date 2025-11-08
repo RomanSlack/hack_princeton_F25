@@ -142,6 +142,7 @@ class AgentState(BaseModel):
     current_node: Optional[str] = None
     current_plan: Optional[str] = None
     last_agent_block: Optional[str] = None  # Track the last agent block executed for looping
+    last_executed_tool_block: Optional[str] = None  # Track the last tool block executed for animation
     past_actions: List[Dict[str, Any]] = Field(
         default_factory=list,
         description="History of past actions taken by the agent (limited to MAX_ACTION_HISTORY)"
@@ -857,6 +858,8 @@ async def get_agents_state():
         agent_states[agent_id] = {
             "agent_id": agent_id,
             "current_node": agent_state.current_node,
+            "last_executed_tool_block": agent_state.last_executed_tool_block,
+            "last_agent_block": agent_state.last_agent_block,
         }
 
     return {
@@ -1017,6 +1020,10 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
         agent_state.past_actions = agent_state.past_actions[-MAX_ACTION_HISTORY:]
 
     logger.info(f"Stored action in history. Total actions in history: {len(agent_state.past_actions)}")
+
+    # Store the executed tool block for animation tracking
+    agent_state.last_executed_tool_block = chosen_tool_block.id
+    logger.info(f"🎬 Animation tracking: agent={agent_id}, tool_block={chosen_tool_block.id}, next_node={chosen_tool_block.next}")
 
     # Update the agent's current node to the tool block's next node
     agent_state.current_node = chosen_tool_block.next
