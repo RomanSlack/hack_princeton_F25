@@ -1,5 +1,6 @@
 import './globals.css'
 import Navigation from '../components/Navigation'
+import { ThemeProvider } from '../contexts/ThemeContext'
 
 export const metadata = {
   title: 'GPT Agent Builder',
@@ -10,8 +11,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <ThemeProvider>
         <Navigation />
         {children}
+        </ThemeProvider>
       </body>
     </html>
   )

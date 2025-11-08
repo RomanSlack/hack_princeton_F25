@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 import NeetCodeRoadmap from '../../components/NeetCodeRoadmap';
 import ComponentDetailSidebar from '../../components/ComponentDetailSidebar';
 
@@ -517,6 +518,7 @@ const getInitialProgress = () => {
 };
 
 export default function LessonsPage() {
+  const theme = useTheme();
   const [progress, setProgress] = useState(getInitialProgress);
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -543,10 +545,10 @@ export default function LessonsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1e1e1e] flex flex-row">
+    <div className={`min-h-screen ${theme.bg.primary} flex flex-row`}>
       {/* Main Content - Roadmap */}
       <div className="flex-1 relative">
-        <div className="h-screen bg-gradient-to-br from-[#1e1e1e] via-[#252526] to-[#1e1e1e] overflow-hidden">
+        <div className={`h-screen ${theme.bg.primary} overflow-hidden`}>
           <NeetCodeRoadmap
             components={COMPONENTS}
             lessons={LESSONS}
