@@ -220,7 +220,7 @@ export default function AgentGameBuilder() {
                   fromBlockId: toolBlock,
                   toBlockId: newNode,
                   startTime: Date.now(),
-                  delay: 400 // Start after first animation completes (400ms)
+                  delay: 500 // Start after first animation fills (500ms)
                 });
               } else if (nodeChanged && prevNode && newNode) {
                 console.log(`🎬 Animation: ${prevNode} → ${newNode}`);
@@ -269,7 +269,7 @@ export default function AgentGameBuilder() {
   useEffect(() => {
     if (animatingTransitions.length === 0) return;
 
-    const SINGLE_ANIMATION_DURATION = 300; // milliseconds per animation step
+    const SINGLE_ANIMATION_DURATION = 1500; // milliseconds per animation step
     const now = Date.now();
 
     // Check if any animations have completed
@@ -1147,42 +1147,71 @@ export default function AgentGameBuilder() {
                   pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
                 }
 
-                // Blue particle color
-                const particleColor = '#3b82f6';
+                // Calculate animation duration - longer with 3 phases: fill, hold, fade
+                const duration = '1.5s'; // 1500ms total
 
-                // Calculate animation duration (400ms to match delay)
-                const duration = '0.4s';
+                // Create keyframes for flowing highlight effect
+                const flowKeyframe = `flow-${transition.id}`;
+                const fadeKeyframe = `fade-${transition.id}`;
 
-                // Use CSS offset-path to follow the curved path
-                const keyframeName = `move-${transition.id}`;
+                // Get the arrow path without extensions (just the visible connection)
+                const arrowPathD = isVerticalConnection
+                  ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
+                  : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+
+                // Estimate path length for animation (rough calculation)
+                const dx = toExtended.x - from.x;
+                const dy = toExtended.y - from.y;
+                const estimatedLength = Math.sqrt(dx * dx + dy * dy) * 1.5; // 1.5x for curve
 
                 return (
                   <g key={transition.id}>
                     <style>
                       {`
-                        @keyframes ${keyframeName} {
+                        @keyframes ${flowKeyframe} {
                           0% {
-                            offset-distance: 0%;
+                            stroke-dashoffset: ${estimatedLength};
+                          }
+                          33% {
+                            stroke-dashoffset: 0;
+                          }
+                          66% {
+                            stroke-dashoffset: 0;
                           }
                           100% {
-                            offset-distance: 100%;
+                            stroke-dashoffset: -${estimatedLength};
+                          }
+                        }
+                        @keyframes ${fadeKeyframe} {
+                          0% {
+                            opacity: 0;
+                          }
+                          5% {
+                            opacity: 1;
+                          }
+                          66% {
+                            opacity: 1;
+                          }
+                          100% {
+                            opacity: 1;
                           }
                         }
                       `}
                     </style>
 
-                    {/* Animated particle following the curved path */}
-                    <circle
-                      r="10"
-                      fill={particleColor}
+                    {/* Flowing highlighted arrow path */}
+                    <path
+                      d={arrowPathD}
+                      stroke="#3b82f6"
+                      strokeWidth="6"
+                      fill="none"
+                      strokeDasharray={`${estimatedLength} ${estimatedLength}`}
                       style={{
-                        filter: `drop-shadow(0 0 10px ${particleColor})`,
-                        opacity: 0.9,
-                        offsetPath: `path('${pathD}')`,
-                        animation: `${keyframeName} ${duration} ease-in-out ${transition.delay}ms forwards`
+                        filter: 'drop-shadow(0 0 8px #3b82f6)',
+                        animation: `${flowKeyframe} ${duration} ease-out ${transition.delay}ms forwards, ${fadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
+                        strokeDashoffset: estimatedLength,
+                        opacity: 0
                       }}
-                      cx="0"
-                      cy="0"
                     />
                   </g>
                 );
@@ -1241,42 +1270,71 @@ export default function AgentGameBuilder() {
                   pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
                 }
 
-                // Blue particle color
-                const particleColor = '#3b82f6';
+                // Calculate animation duration - longer with 3 phases: fill, hold, fade
+                const duration = '1.5s'; // 1500ms total
 
-                // Calculate animation duration (400ms to match delay)
-                const duration = '0.4s';
+                // Create keyframes for flowing highlight effect
+                const flowKeyframe = `flow-${transition.id}`;
+                const fadeKeyframe = `fade-${transition.id}`;
 
-                // Use CSS offset-path to follow the curved path
-                const keyframeName = `move-${transition.id}`;
+                // Get the arrow path without extensions (just the visible connection)
+                const arrowPathD = isVerticalConnection
+                  ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
+                  : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+
+                // Estimate path length for animation (rough calculation)
+                const dx = toExtended.x - from.x;
+                const dy = toExtended.y - from.y;
+                const estimatedLength = Math.sqrt(dx * dx + dy * dy) * 1.5; // 1.5x for curve
 
                 return (
                   <g key={transition.id}>
                     <style>
                       {`
-                        @keyframes ${keyframeName} {
+                        @keyframes ${flowKeyframe} {
                           0% {
-                            offset-distance: 0%;
+                            stroke-dashoffset: ${estimatedLength};
+                          }
+                          33% {
+                            stroke-dashoffset: 0;
+                          }
+                          66% {
+                            stroke-dashoffset: 0;
                           }
                           100% {
-                            offset-distance: 100%;
+                            stroke-dashoffset: -${estimatedLength};
+                          }
+                        }
+                        @keyframes ${fadeKeyframe} {
+                          0% {
+                            opacity: 0;
+                          }
+                          5% {
+                            opacity: 1;
+                          }
+                          66% {
+                            opacity: 1;
+                          }
+                          100% {
+                            opacity: 1;
                           }
                         }
                       `}
                     </style>
 
-                    {/* Animated particle following the curved path */}
-                    <circle
-                      r="10"
-                      fill={particleColor}
+                    {/* Flowing highlighted arrow path */}
+                    <path
+                      d={arrowPathD}
+                      stroke="#3b82f6"
+                      strokeWidth="6"
+                      fill="none"
+                      strokeDasharray={`${estimatedLength} ${estimatedLength}`}
                       style={{
-                        filter: `drop-shadow(0 0 10px ${particleColor})`,
-                        opacity: 0.9,
-                        offsetPath: `path('${pathD}')`,
-                        animation: `${keyframeName} ${duration} ease-in-out ${transition.delay}ms forwards`
+                        filter: 'drop-shadow(0 0 8px #3b82f6)',
+                        animation: `${flowKeyframe} ${duration} ease-out ${transition.delay}ms forwards, ${fadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
+                        strokeDashoffset: estimatedLength,
+                        opacity: 0
                       }}
-                      cx="0"
-                      cy="0"
                     />
                   </g>
                 );
