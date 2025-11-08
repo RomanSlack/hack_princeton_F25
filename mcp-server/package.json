@@ -1,0 +1,54 @@
+{
+  "name": "@windsornguyen/ticketmaster-mcp",
+  "version": "0.1.0",
+  "description": "A Model Context Protocol server for discovering events, venues, and attractions through the Ticketmaster Discovery API",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "ticketmaster-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "start": "node dist/index.js --port 3001",
+    "dev:stdio": "tsx src/index.ts",
+    "dev:shttp": "tsx src/index.ts --port 3001",
+    "prepare": "bun run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/windsornguyen/ticketmaster-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "ticketmaster",
+    "events",
+    "venues",
+    "attractions",
+    "discovery-api"
+  ],
+  "author": {
+    "name": "Windsor Nguyen",
+    "url": "https://windsornguyen.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/windsornguyen/ticketmaster-mcp/issues"
+  },
+  "homepage": "https://github.com/windsornguyen/ticketmaster-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.16.0",
+    "@playwright/test": "^1.54.2",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}
