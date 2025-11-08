@@ -1,0 +1,48 @@
+# Node modules (will be installed fresh)
+node_modules
+*/node_modules
+
+# Build artifacts
+client/dist
+server/dist
+
+# Development files
+*.md
+.git
+.gitignore
+*.log
+
+# Test files
+*.test.ts
+*.test.js
+test_*
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+docs
+*.md
+README*
+IMPLEMENTATION_PLAN.md
+MULTIPLAYER_SETUP.md
+PROJECT_SUMMARY.md
+PROMPT_FOR_AGENT.md
+AI_AGENT_API.md
+AMNESIA_DOC.md
+
+# Scripts
+test_agent_api.sh

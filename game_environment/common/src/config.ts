@@ -14,7 +14,7 @@ export interface ClientConfig {
 // Default configurations
 export const DefaultServerConfig: ServerConfig = {
     hostname: "0.0.0.0", // Bind to all network interfaces for external connections
-    port: 8000,
+    port: parseInt(process.env.PORT || "8000"), // Use Cloud Run's PORT env var if available
     maxConnectionsPerIP: 5, // Prevent single IP from spamming connections
     enableRateLimiting: true
 };
@@ -38,5 +38,14 @@ export function getClientConfig(): ClientConfig {
 
 export function getWebSocketURL(config: ClientConfig): string {
     const protocol = config.useSecureWebSocket ? 'wss' : 'ws';
+    
+    // Don't include port for standard ports (443 for wss, 80 for ws)
+    const isStandardPort = (config.useSecureWebSocket && config.serverPort === 443) || 
+                          (!config.useSecureWebSocket && config.serverPort === 80);
+    
+    if (isStandardPort) {
+        return `${protocol}://${config.serverAddress}/play`;
+    }
+    
     return `${protocol}://${config.serverAddress}:${config.serverPort}/play`;
 }

@@ -3,8 +3,9 @@ import { GameClient } from "./game";
 const gameClient = new GameClient();
 let connected = false;
 
-// Backend API URL
-const BACKEND_URL = 'http://localhost:8001';
+// Backend API URL (for AI agent system)
+// Uses environment variable or defaults to localhost
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001';
 
 // Call backend to register agents and start auto-stepping
 async function startBackendAgents() {
