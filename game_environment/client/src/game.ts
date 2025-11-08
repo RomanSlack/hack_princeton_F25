@@ -14,6 +14,7 @@ interface RenderObject {
     position: Vector;
     rotation: number;
     nameText?: PIXI.Text;
+    leavesContainer?: PIXI.Container; // Separate container for tree leaves (rendered above players)
 }
 
 export class GameClient {
@@ -246,12 +247,29 @@ export class GameClient {
             this.bulletData.set(bulletData.id, bulletData);
         }
 
-        // Update obstacles (only once, they're static)
+        // Update obstacles - create on first run, destroy when needed
         if (this.obstacleSprites.size === 0) {
             for (const obstacleData of packet.obstacles) {
                 if (!obstacleData.destroyed) {
                     const renderObj = this.createObstacleSprite(obstacleData);
                     this.obstacleSprites.set(obstacleData.id, renderObj);
+                }
+            }
+        } else {
+            // Check for destroyed obstacles and remove them
+            for (const obstacleData of packet.obstacles) {
+                if (obstacleData.destroyed) {
+                    const renderObj = this.obstacleSprites.get(obstacleData.id);
+                    if (renderObj) {
+                        this.app.stage.removeChild(renderObj.container);
+                        renderObj.container.destroy();
+                        // Also destroy leaves container if it exists
+                        if (renderObj.leavesContainer) {
+                            this.app.stage.removeChild(renderObj.leavesContainer);
+                            renderObj.leavesContainer.destroy();
+                        }
+                        this.obstacleSprites.delete(obstacleData.id);
+                    }
                 }
             }
         }
@@ -319,12 +337,19 @@ export class GameClient {
             this.grassBackground.scale.set(this.camera.zoom);
         }
 
-        // Render obstacles (bottom layer)
+        // Render obstacles (bottom layer - trunks only)
         for (const [_id, obj] of this.obstacleSprites.entries()) {
             const screenPos = this.camera.worldToScreen(obj.position);
             obj.container.position.set(screenPos.x, screenPos.y);
             obj.container.rotation = obj.rotation;
             obj.container.scale.set(this.camera.zoom);
+
+            // Also update leaves container if it exists (rendered separately at higher z-index)
+            if (obj.leavesContainer) {
+                obj.leavesContainer.position.set(screenPos.x, screenPos.y);
+                obj.leavesContainer.rotation = obj.rotation;
+                obj.leavesContainer.scale.set(this.camera.zoom);
+            }
         }
 
         // Render loot
@@ -460,13 +485,17 @@ export class GameClient {
 
     private createObstacleSprite(obstacleData: ObstacleData): RenderObject {
         const container = new PIXI.Container();
+        let leavesContainer: PIXI.Container | undefined = undefined;
 
         if (obstacleData.type === 'tree') {
-            // Shadow for tree
+            // Shadow for tree (on trunk container)
             const shadow = new PIXI.Graphics();
             shadow.ellipse(0.5, 1, 4 * obstacleData.scale, 2 * obstacleData.scale);
             shadow.fill({ color: 0x000000, alpha: 0.35 });
             container.addChild(shadow);
+
+            // Create separate container for leaves (will render above players)
+            leavesContainer = new PIXI.Container();
 
             // Tree with trunk and leaves
             const trunkTex = this.assetManager.getTexture('tree_trunk');
@@ -476,34 +505,39 @@ export class GameClient {
                 const trunk = new PIXI.Sprite(trunkTex);
                 trunk.anchor.set(0.5, 0.5);
                 trunk.scale.set(0.08 * obstacleData.scale);
-                container.addChild(trunk);
+                container.addChild(trunk); // Trunk stays in main container
             }
 
             if (leavesTex) {
                 const leaves = new PIXI.Sprite(leavesTex);
                 leaves.anchor.set(0.5, 0.5);
                 leaves.scale.set(0.08 * obstacleData.scale);
-                container.addChild(leaves);
+                leaves.alpha = 0.85; // Make leaves slightly transparent
+                leavesContainer.addChild(leaves); // Leaves go in separate container
             }
 
             // Fallback if no textures
             if (!trunkTex && !leavesTex) {
                 // Trunk
                 const trunk = new PIXI.Graphics();
-                trunk.rect(-0.5 * obstacleData.scale, -1 * obstacleData.scale, 1 * obstacleData.scale, 3 * obstacleData.scale);
+                trunk.rect(-0.5 * obstacleData.scale, -1 * obstacleData.scale, obstacleData.scale, 3 * obstacleData.scale);
                 trunk.fill({ color: 0x4a3728 });
                 trunk.stroke({ color: 0x2d2116, width: 0.2 });
 
                 // Leaves
                 const leaves = new PIXI.Graphics();
                 leaves.circle(0, -1, 3.5 * obstacleData.scale);
-                leaves.fill({ color: 0x2d6b22 });
+                leaves.fill({ color: 0x2d6b22, alpha: 0.85 }); // Slightly transparent
                 leaves.circle(0, -1, 3.5 * obstacleData.scale);
                 leaves.stroke({ color: 0x1f5018, width: 0.3 });
 
-                container.addChild(trunk);
-                container.addChild(leaves);
+                container.addChild(trunk); // Trunk in main container
+                leavesContainer.addChild(leaves); // Leaves in separate container
             }
+
+            // Add leaves container to stage at higher z-index (above players)
+            leavesContainer.zIndex = 30; // Above players (20) but below bullets (25)
+            this.app.stage.addChild(leavesContainer);
         } else if (obstacleData.type === 'rock') {
             // Shadow for rock
             const shadow = new PIXI.Graphics();
@@ -580,13 +614,14 @@ export class GameClient {
             container.addChild(wall);
         }
 
-        container.zIndex = 10; // Obstacles layer
+        container.zIndex = 10; // Obstacles layer (trunks)
         this.app.stage.addChild(container);
 
         return {
             container,
             position: Vec(obstacleData.x, obstacleData.y),
-            rotation: obstacleData.rotation
+            rotation: obstacleData.rotation,
+            leavesContainer // Include leaves container for trees (undefined for other obstacles)
         };
     }
 
