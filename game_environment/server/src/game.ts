@@ -148,6 +148,8 @@ export class Game {
         for (const agent of this.aiAgents.values()) {
             if (!agent.dead) {
                 agent.update(this);
+                // Update smooth movement interpolation
+                agent.updateSmoothMovement(this);
             } else {
                 // Auto-respawn after 3 seconds
                 if (!agent['respawnTime']) {
