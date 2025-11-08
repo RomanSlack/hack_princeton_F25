@@ -682,6 +682,13 @@ export default function AgentGameBuilder() {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
+      {/* Global animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
       {/* Left Column - Game Preview & Run Button (2/5 width) */}
       <div className={`w-2/5 flex flex-col ${theme.bg.secondary} ${theme.border.primary} border-r shadow-lg h-full overflow-hidden`}>
         {/* Top - Game Iframe */}
@@ -1039,13 +1046,17 @@ export default function AgentGameBuilder() {
                     padding: '8px 16px',
                     zIndex: isExecuting ? 20 : 10,
                     border: connectingFrom === block.id ? '3px solid yellow' : isExecuting ? `3px solid ${highlightColor}` : '2px solid rgba(0,0,0,0.2)',
-                    boxShadow: isExecuting ? `0 0 25px 8px ${glowColor}` : undefined,
+                    boxShadow: isExecuting ? `0 0 25px 8px ${glowColor}` : 'none',
+                    transition: 'border 300ms ease-in-out, box-shadow 300ms ease-in-out',
                   }}
                 >
                   {isExecuting && (
                     <div
                       className="absolute -left-6 top-1/2 -translate-y-1/2 text-lg animate-pulse"
-                      style={{ color: highlightColor }}
+                      style={{
+                        color: highlightColor,
+                        animation: 'fadeIn 300ms ease-in-out'
+                      }}
                     >
                       ▶
                     </div>
