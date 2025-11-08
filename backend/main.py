@@ -273,6 +273,8 @@ class ProgramSchema(BaseModel):
         if not has_on_start:
             raise ValueError("Program must have at least one 'onStart' action block")
 
+        return v  # IMPORTANT: Must return the value!
+
 
 class AddAgentRequest(BaseModel):
     """Request schema for adding an agent"""
@@ -282,6 +284,21 @@ class AddAgentRequest(BaseModel):
     username: Optional[str] = Field(None, description="Display name for the agent in game")
     preferred_zone: Optional[str] = Field(None, description="Preferred zone (zone1 or zone2)")
     zone2_left_only: bool = Field(False, description="If zone2, spawn only on left side of gate")
+
+    @validator("blocks")
+    def validate_blocks(cls, v):
+        if len(v) == 0:
+            raise ValueError("Program must have at least one block")
+
+        # Check for at least one onStart action
+        has_on_start = any(
+            isinstance(block, ActionBlock) and block.action_type == "onStart"
+            for block in v
+        )
+        if not has_on_start:
+            raise ValueError("Program must have at least one 'onStart' action block")
+
+        return v
 
 
 class AgentState(BaseModel):
@@ -740,12 +757,9 @@ async def add_agent(request: AddAgentRequest):
             detail=f"Agent with ID '{agent_id}' already exists"
         )
 
-    # Create ProgramSchema from request
-    program = ProgramSchema(agent_id=request.agent_id, blocks=request.blocks)
-
     # Find the onStart action block
     on_start_block = None
-    for block in program.blocks:
+    for block in request.blocks:
         if isinstance(block, ActionBlock) and block.action_type == "onStart":
             on_start_block = block
             break
@@ -755,6 +769,15 @@ async def add_agent(request: AddAgentRequest):
             status_code=400,
             detail="Program must contain an 'onStart' action block"
         )
+
+    # Create ProgramSchema from request (blocks already validated by AddAgentRequest)
+    program = ProgramSchema(
+        agent_id=request.agent_id,
+        blocks=request.blocks
+    )
+
+    # Debug: Check if blocks are properly assigned
+    logger.info(f"Program created with {len(program.blocks) if program.blocks else 0} blocks")
 
     # Initialize agent state with current_node set to onStart's next block
     agent_state = AgentState(
@@ -822,10 +845,17 @@ async def register_agents_in_game():
         agent_state = agents[agent_id]
 
         # Store the agent program data for frontend visualization
-        agent_programs[agent_id] = {
-            "blocks": [block.dict() for block in agent_state.program.blocks],
-            "agent_id": agent_id
-        }
+        if agent_state.program and agent_state.program.blocks:
+            agent_programs[agent_id] = {
+                "blocks": [block.dict() for block in agent_state.program.blocks],
+                "agent_id": agent_id
+            }
+        else:
+            logger.warning(f"Agent {agent_id} has no program blocks, skipping visualization data")
+            agent_programs[agent_id] = {
+                "blocks": [],
+                "agent_id": agent_id
+            }
 
         if agent_id not in game_session.registered_agents:
             try:
@@ -1159,6 +1189,14 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
 
     agent_state = agents[agent_id]
     current_node_id = agent_state.current_node
+
+    # Safety check: Ensure program and blocks exist
+    if not agent_state.program or not agent_state.program.blocks:
+        logger.error(f"Agent {agent_id} has no program or blocks!")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Agent {agent_id} program is corrupted (no blocks)"
+        )
 
     # Handle action triggers (e.g., "attacked")
     if request.action_occurred:
