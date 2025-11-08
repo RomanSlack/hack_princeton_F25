@@ -19,7 +19,8 @@ export class InputManager {
     actions = {
         switchWeapon: false,
         pickup: false,
-        reload: false
+        reload: false,
+        shoot: false  // One-time shoot action
     };
 
     private inputSequence = 0;
@@ -78,7 +79,10 @@ export class InputManager {
         });
 
         this.canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 0) this.mouse.down = true;
+            if (e.button === 0) {
+                this.mouse.down = true;
+                this.actions.shoot = true; // Trigger one-time shoot
+            }
         });
 
         this.canvas.addEventListener('mouseup', (e) => {
@@ -136,7 +140,7 @@ export class InputManager {
             seq: this.inputSequence++,
             movement: { ...this.keys },
             mouse: worldMouse,
-            attacking: this.mouse.down,
+            attacking: this.actions.shoot, // Use one-time shoot action
             actions: {
                 switchWeapon: this.actions.switchWeapon,
                 pickup: this.actions.pickup,
@@ -148,6 +152,7 @@ export class InputManager {
         this.actions.switchWeapon = false;
         this.actions.pickup = false;
         this.actions.reload = false;
+        this.actions.shoot = false; // Reset shoot action
 
         return packet;
     }
