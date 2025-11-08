@@ -1,0 +1,11 @@
+[project]
+name = "agents-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dedalus-labs>=0.1.0a9",
+    "fastapi[standard]>=0.121.0",
+    "python-dotenv>=1.2.1",
+]
