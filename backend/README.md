@@ -166,7 +166,7 @@ curl -X POST http://localhost:8000/add-agent \
       "id": "plan_1",
       "type": "tool",
       "tool_type": "plan",
-      "parameters": {},
+      "parameters": {"plan": "string"},
       "next": "explore_agent"
     },
     {
@@ -322,7 +322,7 @@ curl -X POST http://localhost:8000/next-step-for-agents \
 - `move`: Requires `x` (number) and `y` (number) - relative coordinates for movement
 - `attack`: Requires `target_player_id` (string) - ID of the player to attack
 - `collect`: No parameters required
-- `plan`: No parameters required
+- `plan`: Requires `plan` (string) - the strategic plan text
 
 ## Block Types
 
@@ -343,7 +343,7 @@ Executes game actions with optional parameters:
 - `move`: Move the agent (requires x, y coordinates)
 - `attack`: Attack another agent (requires target_player_id)
 - `collect`: Collect resources (no parameters)
-- `plan`: Strategic planning (no parameters)
+- `plan`: Strategic planning (requires plan text)
 - Each tool block defines its parameter schema using the `parameters` field
 
 ## Schema Notes

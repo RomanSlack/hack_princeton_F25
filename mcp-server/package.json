@@ -1,0 +1,44 @@
+{
+  "name": "ai-planning-mcp",
+  "version": "0.1.0",
+  "description": "A Model Context Protocol server for AI-powered planning using Grok-4",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "ai-planning-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "start": "node dist/index.js --port 3001",
+    "dev:stdio": "tsx src/index.ts",
+    "dev:http": "tsx src/index.ts --port 3001",
+    "prepare": "bun run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "ai",
+    "planning",
+    "grok",
+    "xai"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/xai": "^2.0.31",
+    "@modelcontextprotocol/sdk": "1.16.0",
+    "@playwright/test": "^1.54.2",
+    "ai": "^5.0.89",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "@types/json-schema": "^7.0.15",
+    "@types/node": "^24.2.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}

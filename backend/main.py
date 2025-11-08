@@ -121,6 +121,7 @@ class AgentState(BaseModel):
     agent_id: str
     program: ProgramSchema
     current_node: Optional[str] = None
+    current_plan: Optional[str] = None
 
 
 class GameState(BaseModel):
@@ -213,7 +214,7 @@ def game_state_to_llm_format(game_state: GameState) -> str:
         parts.append(f"Inventory: {', '.join(game_state.inventory)}")
 
     if game_state.nearby_agents:
-        parts.append(f"Nearby agents: {len(game_state.nearby_agents)} agents detected")
+        parts.append(f"Nearby agents: {', '.join([agent['id'] for agent in game_state.nearby_agents])}")
 
     if not parts:
         return "No specific game state information available."
@@ -224,7 +225,8 @@ def game_state_to_llm_format(game_state: GameState) -> str:
 async def execute_agent_block(
     agent_block: AgentBlock,
     game_state: GameState,
-    all_blocks: List[Block]
+    all_blocks: List[Block],
+    current_plan: Optional[str] = None
 ) -> tuple[str, Dict[str, Any]]:
     """
     Execute an agent block using Dedalus SDK to decide which tool to use.
@@ -235,6 +237,11 @@ async def execute_agent_block(
     # Convert game state to LLM-readable format
     game_state_str = game_state_to_llm_format(game_state)
     logger.info(f"Game state: {game_state_str}")
+
+    # Add current plan to context if available
+    if current_plan:
+        logger.info(f"Current plan: {current_plan}")
+        game_state_str += f"\n\nCurrent strategic plan: {current_plan}"
 
     # Build a map of tool blocks and their parameter schemas
     tool_blocks_map = {}
@@ -256,6 +263,9 @@ async def execute_agent_block(
     available_tools = [conn.tool_name for conn in agent_block.tool_connections]
     logger.info(f"Available tools: {', '.join(available_tools)}")
 
+    # Check if plan tool is available
+    has_plan_tool = "plan" in available_tools
+
     # Construct the input prompt
     user_input = (
         f"{agent_block.user_prompt}\n\n"
@@ -268,13 +278,22 @@ async def execute_agent_block(
     full_input = agent_block.system_prompt + "\n\n" + user_input
     logger.info(f"LLM Input:\n{full_input}")
 
-    # Call Dedalus
+    # Call Dedalus with MCP server access if plan tool is available
     logger.info(f"Calling LLM with model: {agent_block.model}")
-    response = await dedalus_runner.run(
-        input=full_input, # TODO: remove this once we figure out how to pass the system prompt
-        model=agent_block.model,
-        #system=agent_block.system_prompt # TODO: how do I pass system messages in Dedalus??
-    )
+    if has_plan_tool:
+        logger.info("Plan tool detected, including MCP server access")
+        response = await dedalus_runner.run(
+            input=full_input, # TODO: remove this once we figure out how to pass the system prompt
+            model=agent_block.model,
+            mcp_servers=["raptors65/hack-princeton-mcp"],
+            #system=agent_block.system_prompt # TODO: how do I pass system messages in Dedalus??
+        )
+    else:
+        response = await dedalus_runner.run(
+            input=full_input, # TODO: remove this once we figure out how to pass the system prompt
+            model=agent_block.model,
+            #system=agent_block.system_prompt # TODO: how do I pass system messages in Dedalus??
+        )
 
     # Extract the tool name and parameters from the response
     logger.info(f"LLM Raw Output: {response.final_output}")
@@ -432,7 +451,8 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
     tool_choice, parameters = await execute_agent_block(
         current_block,
         request.game_state,
-        agent_state.program.blocks
+        agent_state.program.blocks,
+        agent_state.current_plan
     )
 
     # Find the tool block corresponding to the chosen tool
@@ -451,6 +471,11 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
             status_code=500,
             detail=f"Tool block for '{tool_choice}' not found"
         )
+
+    # If the tool is "plan", store the plan in agent state
+    if tool_choice == "plan" and "plan" in parameters:
+        agent_state.current_plan = parameters["plan"]
+        logger.info(f"Stored plan for agent {agent_id}: {agent_state.current_plan}")
 
     # Update the agent's current node to the tool block's next node
     agent_state.current_node = chosen_tool_block.next
