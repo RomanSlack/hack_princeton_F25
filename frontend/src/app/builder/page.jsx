@@ -113,8 +113,13 @@ export default function AgentGameBuilder() {
 
   const blockIdCounter = useRef(0);
 
-  // State for tracking current executing nodes
+  // State for tracking current executing nodes and last executed tools
+  // Format: { agentId: { currentNode: "block-id", lastTool: "tool-id" } }
   const [currentNodes, setCurrentNodes] = useState({});
+  const prevCurrentNodes = useRef({});
+
+  // State for tracking active transition animations
+  const [animatingTransitions, setAnimatingTransitions] = useState([]);
 
   // Load from localStorage only on client side after mount
   useEffect(() => {
@@ -175,13 +180,80 @@ export default function AgentGameBuilder() {
         const response = await fetch(`${BACKEND_URL}/agents-state`);
         if (response.ok) {
           const data = await response.json();
+
           if (data.agents) {
-            // Update current nodes for all agents
+            // Detect transitions and create animations BEFORE updating state
+            const newTransitions = [];
+
+            Object.entries(data.agents).forEach(([agentId, state]) => {
+              const prevData = prevCurrentNodes.current[agentId];
+              const prevNode = prevData?.currentNode;
+              const newNode = state.current_node;
+              const toolBlock = state.last_executed_tool_block;
+              const lastAgentBlock = state.last_agent_block;
+
+              // Check if we should animate
+              // We animate when the current node changed from what we tracked before
+              const nodeChanged = prevNode !== newNode;
+
+              // Only animate if:
+              // 1. The node changed from what we had before
+              // 2. We have complete path information
+              if (nodeChanged && lastAgentBlock && toolBlock && newNode) {
+                console.log(`🎬 Animation: ${lastAgentBlock} → ${toolBlock} → ${newNode}`);
+
+                // Multi-step animation: last agent → tool → current agent
+                // First animation: previous agent block → tool block
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}-1`,
+                  agentId,
+                  fromBlockId: lastAgentBlock,
+                  toBlockId: toolBlock,
+                  startTime: Date.now(),
+                  delay: 0 // Start immediately
+                });
+
+                // Second animation: tool block → current agent block
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}-2`,
+                  agentId,
+                  fromBlockId: toolBlock,
+                  toBlockId: newNode,
+                  startTime: Date.now(),
+                  delay: 400 // Start after first animation completes (400ms)
+                });
+              } else if (nodeChanged && prevNode && newNode) {
+                console.log(`🎬 Animation: ${prevNode} → ${newNode}`);
+
+                // Single-step animation: direct connection (no tool block info)
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}`,
+                  agentId,
+                  fromBlockId: prevNode,
+                  toBlockId: newNode,
+                  startTime: Date.now(),
+                  delay: 0
+                });
+              }
+            });
+
+            // Add new transitions to state
+            if (newTransitions.length > 0) {
+              setAnimatingTransitions(prev => [...prev, ...newTransitions]);
+            }
+
+            // Update current nodes state for next poll
             const newCurrentNodes = {};
             Object.entries(data.agents).forEach(([agentId, state]) => {
-              newCurrentNodes[agentId] = state.current_node;
+              newCurrentNodes[agentId] = {
+                currentNode: state.current_node,
+                lastTool: state.last_executed_tool_block,
+                lastAgentBlock: state.last_agent_block
+              };
             });
+
             setCurrentNodes(newCurrentNodes);
+            prevCurrentNodes.current = newCurrentNodes;
           }
         }
       } catch (error) {
@@ -192,6 +264,35 @@ export default function AgentGameBuilder() {
 
     return () => clearInterval(pollInterval);
   }, [isClient]);
+
+  // Cleanup completed transition animations
+  useEffect(() => {
+    if (animatingTransitions.length === 0) return;
+
+    const SINGLE_ANIMATION_DURATION = 300; // milliseconds per animation step
+    const now = Date.now();
+
+    // Check if any animations have completed
+    // Each animation completes at: startTime + delay + duration
+    const hasCompletedAnimations = animatingTransitions.some(
+      transition => now - transition.startTime >= transition.delay + SINGLE_ANIMATION_DURATION
+    );
+
+    if (hasCompletedAnimations) {
+      // Remove completed animations
+      const timeout = setTimeout(() => {
+        setAnimatingTransitions(prev =>
+          prev.filter(transition => {
+            const elapsed = Date.now() - transition.startTime;
+            const completionTime = transition.delay + SINGLE_ANIMATION_DURATION;
+            return elapsed < completionTime;
+          })
+        );
+      }, SINGLE_ANIMATION_DURATION);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [animatingTransitions]);
 
   // Zoom controls
   const handleZoomIn = () => {
@@ -701,6 +802,13 @@ export default function AgentGameBuilder() {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
+      {/* Global animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
       {/* Left Column - Game Preview & Run Button (2/5 width) */}
       <div className={`w-2/5 flex flex-col ${theme.bg.secondary} ${theme.border.primary} border-r shadow-lg h-full overflow-hidden`}>
         {/* Top - Game Iframe */}
@@ -986,6 +1094,194 @@ export default function AgentGameBuilder() {
                 />
               )}
 
+              {/* Animated transition particles */}
+              {animatingTransitions.map(transition => {
+                // Find the connection between from and to blocks
+                const connection = connections.find(
+                  conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
+                );
+
+                if (!connection) {
+                  console.warn(`⚠️ No connection found for transition: ${transition.fromBlockId} → ${transition.toBlockId}`);
+                  return null; // Skip if no connection exists
+                }
+
+                // Use edge-based connection points (same as arrows)
+                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
+                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+                const toExtended = extendToArrowheadTip(to, to.edge);
+
+                // Extend the path into the blocks based on edge direction
+                const extendDistance = 40; // Pixels to extend into the block
+                let fromExtended = { ...from };
+                let toExtendedIntoBlock = { ...toExtended };
+
+                // Extend start point INTO source block (opposite direction of edge)
+                switch (from.edge) {
+                  case 'right': fromExtended.x -= extendDistance; break;  // Go left into block
+                  case 'left': fromExtended.x += extendDistance; break;   // Go right into block
+                  case 'bottom': fromExtended.y -= extendDistance; break; // Go up into block
+                  case 'top': fromExtended.y += extendDistance; break;    // Go down into block
+                }
+
+                // Extend end point INTO destination block (into block interior)
+                switch (to.edge) {
+                  case 'right': toExtendedIntoBlock.x -= extendDistance; break;  // Go left into block
+                  case 'left': toExtendedIntoBlock.x += extendDistance; break;   // Go right into block
+                  case 'bottom': toExtendedIntoBlock.y -= extendDistance; break; // Go up into block
+                  case 'top': toExtendedIntoBlock.y += extendDistance; break;    // Go down into block
+                }
+
+                const midX = (from.x + toExtended.x) / 2;
+                const midY = (from.y + toExtended.y) / 2;
+
+                // Determine curve shape based on connection edge (same logic as connections)
+                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
+                let pathD;
+
+                if (isVerticalConnection) {
+                  // Vertical-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                } else {
+                  // Horizontal-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                }
+
+                // Blue particle color
+                const particleColor = '#3b82f6';
+
+                // Calculate animation duration (400ms to match delay)
+                const duration = '0.4s';
+
+                // Use CSS offset-path to follow the curved path
+                const keyframeName = `move-${transition.id}`;
+
+                return (
+                  <g key={transition.id}>
+                    <style>
+                      {`
+                        @keyframes ${keyframeName} {
+                          0% {
+                            offset-distance: 0%;
+                          }
+                          100% {
+                            offset-distance: 100%;
+                          }
+                        }
+                      `}
+                    </style>
+
+                    {/* Animated particle following the curved path */}
+                    <circle
+                      r="10"
+                      fill={particleColor}
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${particleColor})`,
+                        opacity: 0.9,
+                        offsetPath: `path('${pathD}')`,
+                        animation: `${keyframeName} ${duration} ease-in-out ${transition.delay}ms forwards`
+                      }}
+                      cx="0"
+                      cy="0"
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Animated transition particles */}
+              {animatingTransitions.map(transition => {
+                // Find the connection between from and to blocks
+                const connection = connections.find(
+                  conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
+                );
+
+                if (!connection) {
+                  console.warn(`⚠️ No connection found for transition: ${transition.fromBlockId} → ${transition.toBlockId}`);
+                  return null; // Skip if no connection exists
+                }
+
+                // Use edge-based connection points (same as arrows)
+                const from = getBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
+                const to = getBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+                const toExtended = extendToArrowheadTip(to, to.edge);
+
+                // Extend the path into the blocks based on edge direction
+                const extendDistance = 40; // Pixels to extend into the block
+                let fromExtended = { ...from };
+                let toExtendedIntoBlock = { ...toExtended };
+
+                // Extend start point INTO source block (opposite direction of edge)
+                switch (from.edge) {
+                  case 'right': fromExtended.x -= extendDistance; break;  // Go left into block
+                  case 'left': fromExtended.x += extendDistance; break;   // Go right into block
+                  case 'bottom': fromExtended.y -= extendDistance; break; // Go up into block
+                  case 'top': fromExtended.y += extendDistance; break;    // Go down into block
+                }
+
+                // Extend end point INTO destination block (into block interior)
+                switch (to.edge) {
+                  case 'right': toExtendedIntoBlock.x -= extendDistance; break;  // Go left into block
+                  case 'left': toExtendedIntoBlock.x += extendDistance; break;   // Go right into block
+                  case 'bottom': toExtendedIntoBlock.y -= extendDistance; break; // Go up into block
+                  case 'top': toExtendedIntoBlock.y += extendDistance; break;    // Go down into block
+                }
+
+                const midX = (from.x + toExtended.x) / 2;
+                const midY = (from.y + toExtended.y) / 2;
+
+                // Determine curve shape based on connection edge (same logic as connections)
+                const isVerticalConnection = to.edge === 'top' || to.edge === 'bottom';
+                let pathD;
+
+                if (isVerticalConnection) {
+                  // Vertical-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                } else {
+                  // Horizontal-first curve with extensions
+                  pathD = `M ${fromExtended.x} ${fromExtended.y} L ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y} L ${toExtendedIntoBlock.x} ${toExtendedIntoBlock.y}`;
+                }
+
+                // Blue particle color
+                const particleColor = '#3b82f6';
+
+                // Calculate animation duration (400ms to match delay)
+                const duration = '0.4s';
+
+                // Use CSS offset-path to follow the curved path
+                const keyframeName = `move-${transition.id}`;
+
+                return (
+                  <g key={transition.id}>
+                    <style>
+                      {`
+                        @keyframes ${keyframeName} {
+                          0% {
+                            offset-distance: 0%;
+                          }
+                          100% {
+                            offset-distance: 100%;
+                          }
+                        }
+                      `}
+                    </style>
+
+                    {/* Animated particle following the curved path */}
+                    <circle
+                      r="10"
+                      fill={particleColor}
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${particleColor})`,
+                        opacity: 0.9,
+                        offsetPath: `path('${pathD}')`,
+                        animation: `${keyframeName} ${duration} ease-in-out ${transition.delay}ms forwards`
+                      }}
+                      cx="0"
+                      cy="0"
+                    />
+                  </g>
+                );
+              })}
+
               {/* Context menu for connection deletion */}
               {contextMenu && (
                 <foreignObject
@@ -1064,7 +1360,7 @@ export default function AgentGameBuilder() {
             {/* Blocks */}
             {blocks.map(block => {
               // Check if this block is currently executing for THIS agent (matching agentId)
-              const isExecuting = agentId && currentNodes[agentId] === block.id;
+              const isExecuting = agentId && currentNodes[agentId]?.currentNode === block.id;
 
               // Colors based on theme - darker yellow for light mode for better contrast
               const highlightColor = theme.isDark ? '#ffff00' : '#d97706'; // Bright yellow for dark, amber-600 for light
@@ -1090,14 +1386,18 @@ export default function AgentGameBuilder() {
                     backgroundColor: block.color,
                     padding: '8px 16px',
                     zIndex: isExecuting ? 20 : 10,
-                    border: connectingFrom === block.id ? '3px solid yellow' : isExecuting ? `3px solid ${highlightColor}` : '2px solid rgba(0,0,0,0.2)',
-                    boxShadow: isExecuting ? `0 0 25px 8px ${glowColor}` : undefined,
+                    border: connectingFrom === block.id ? '3px solid yellow' : isExecuting ? `3px solid ${highlightColor}` : '3px solid rgba(0,0,0,0.2)',
+                    boxShadow: isExecuting ? `0 0 25px 8px ${glowColor}` : 'none',
+                    transition: 'border 300ms ease-in-out, box-shadow 300ms ease-in-out',
                   }}
                 >
                   {isExecuting && (
                     <div
                       className="absolute -left-6 top-1/2 -translate-y-1/2 text-lg animate-pulse"
-                      style={{ color: highlightColor }}
+                      style={{
+                        color: highlightColor,
+                        animation: 'fadeIn 300ms ease-in-out'
+                      }}
                     >
                       ▶
                     </div>
