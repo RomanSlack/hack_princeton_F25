@@ -19,10 +19,12 @@ export class LightingSystem {
 
     constructor(stage: PIXI.Container) {
         this.container = new PIXI.Container();
+        this.container.eventMode = 'none'; // Don't intercept events
 
         // Shadow graphics with multiply blending for realistic shadows
         this.shadowGraphics = new PIXI.Graphics();
         this.shadowGraphics.blendMode = 'multiply';
+        this.shadowGraphics.eventMode = 'none';
 
         this.container.addChild(this.shadowGraphics);
         stage.addChild(this.container);
@@ -106,6 +108,9 @@ export class LightingSystem {
 
     private render(camera: Camera): void {
         this.shadowGraphics.clear();
+
+        // Don't render if no obstacles yet
+        if (this.obstacles.length === 0) return;
 
         // Render shadow for each obstacle
         for (const obstacle of this.obstacles) {

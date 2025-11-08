@@ -63,11 +63,12 @@ export class GameClient {
         // Load assets
         await this.assetManager.loadAssets();
 
-        // Initialize lighting system (sun-based shadows)
-        this.lightingSystem = new LightingSystem(this.app.stage);
-        this.lightingSystem.setShadowIntensity(0.4);
-        this.lightingSystem.setSunDirection(Vec(0.6, 0.8)); // Sun from top-right
-        this.lightingSystem.getContainer().zIndex = 100;
+        // Initialize lighting system (sun-based shadows) - DISABLED FOR DEBUG
+        // this.lightingSystem = new LightingSystem(this.app.stage);
+        // this.lightingSystem.setShadowIntensity(0.3);
+        // this.lightingSystem.setSunDirection(Vec(0.6, 0.8)); // Sun from top-right
+        // this.lightingSystem.getContainer().zIndex = 50; // Between players and UI
+        // this.lightingSystem.getContainer().eventMode = 'none'; // Don't block mouse events
 
         // Enable z-index sorting for proper layer ordering
         this.app.stage.sortableChildren = true;
@@ -238,6 +239,7 @@ export class GameClient {
         for (const bulletData of packet.bullets) {
             if (!this.bulletGraphics.has(bulletData.id)) {
                 const graphic = new PIXI.Graphics();
+                graphic.zIndex = 25; // Above players
                 this.app.stage.addChild(graphic);
                 this.bulletGraphics.set(bulletData.id, graphic);
             }
@@ -297,8 +299,10 @@ export class GameClient {
             document.getElementById('hud')!.style.display = 'none';
         }
 
-        // Update lighting system with obstacle data
-        this.lightingSystem.updateObstacles(packet.obstacles);
+        // Update lighting system with obstacle data - DISABLED FOR DEBUG
+        // if (this.lightingSystem) {
+        //     this.lightingSystem.updateObstacles(packet.obstacles);
+        // }
     }
 
     private render(): void {
@@ -381,8 +385,10 @@ export class GameClient {
             graphic.stroke({ color: 0xffff88, width: 1.5 * this.camera.zoom });
         }
 
-        // Update lighting system (renders sun-based shadows)
-        this.lightingSystem.update(this.camera);
+        // Update lighting system (renders sun-based shadows) - DISABLED FOR DEBUG
+        // if (this.lightingSystem && this.obstacleSprites.size > 0) {
+        //     this.lightingSystem.update(this.camera);
+        // }
     }
 
     private createPlayerSprite(playerData: PlayerData): RenderObject {
