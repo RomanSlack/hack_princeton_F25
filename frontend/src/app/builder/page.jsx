@@ -3,9 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import toast, { Toaster } from 'react-hot-toast';
+import AgentTabs from '../../components/AgentTabs.jsx';
 
 // Backend port - update if your backend runs on a different port
 const BACKEND_URL = 'http://localhost:8001';
+
+// Tabs localStorage keys
+const TABS_KEY = 'agent-builder-tabs';
+const ACTIVE_TAB_KEY = 'agent-builder-activeTab';
 
 // Available models (sorted by speed/cost, fastest first)
 const MODELS = [
@@ -126,149 +131,252 @@ export default function AgentGameBuilder() {
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [showAgentsPanel, setShowAgentsPanel] = useState(false);
 
+  // Tabs state
+  const [tabs, setTabs] = useState([]); // [{ id, title, agentId, deployed, blocks, connections, blockCounter, zoom, panOffset }]
+  const [activeTabId, setActiveTabId] = useState(null);
+  const tabsReadyRef = useRef(false);
+
+  // Helpers for tabs
+  const persistTabs = (nextTabs, nextActiveId) => {
+    try {
+      localStorage.setItem(TABS_KEY, JSON.stringify(nextTabs));
+      if (nextActiveId !== undefined && nextActiveId !== null) {
+        localStorage.setItem(ACTIVE_TAB_KEY, nextActiveId);
+      }
+    } catch (e) {
+      console.error('Failed persisting tabs:', e);
+    }
+  };
+
+  const deepClone = (value) => {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      // Fallback shallow clone
+      if (Array.isArray(value)) return [...value];
+      if (value && typeof value === 'object') return { ...value };
+      return value;
+    }
+  };
+
+  const loadTabIntoCanvas = (tab) => {
+    setBlocks(Array.isArray(tab?.blocks) ? tab.blocks : []);
+    setConnections(Array.isArray(tab?.connections) ? tab.connections : []);
+    setAgentId(tab?.agentId || '');
+    setZoom(typeof tab?.zoom === 'number' ? tab.zoom : 1);
+    setPanOffset(tab?.panOffset || { x: 0, y: 0 });
+    blockIdCounter.current = typeof tab?.blockCounter === 'number' ? tab.blockCounter : 0;
+  };
+
+  // No default tab creation; tabs are created upon deploy
+
+  const handleSwitchTab = (id) => {
+    if (id === activeTabId) return;
+    const nextActive = tabs.find(t => t.id === id);
+    if (!nextActive) return;
+    // Persist current active tab snapshot before switching
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === activeTabId);
+      if (idx >= 0) {
+        const cur = prev[idx];
+        const updated = {
+          ...cur,
+          blocks,
+          connections,
+          agentId,
+          blockCounter: blockIdCounter.current,
+          zoom,
+          panOffset,
+        };
+        const newTabs = [...prev];
+        newTabs[idx] = updated;
+        persistTabs(newTabs, nextActive.id);
+        return newTabs;
+      }
+      persistTabs(prev, nextActive.id);
+      return prev;
+    });
+    setActiveTabId(id);
+    loadTabIntoCanvas(nextActive);
+  };
+
+  const handleAddTab = () => {
+    // Save current active tab snapshot
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === activeTabId);
+      if (idx >= 0) {
+        const cur = prev[idx];
+        const updated = {
+          ...cur,
+          blocks,
+          connections,
+          agentId,
+          blockCounter: blockIdCounter.current,
+          zoom,
+          panOffset,
+        };
+        const newTabs = [...prev];
+        newTabs[idx] = updated;
+        persistTabs(newTabs, null);
+        return newTabs;
+      }
+      return prev;
+    });
+    // Deselect and clear canvas for a fresh workspace (not yet a tab)
+    setActiveTabId(null);
+    setBlocks([]);
+    setConnections([]);
+    setAgentId('');
+    blockIdCounter.current = 0;
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  const handleCloseTab = async (tabId) => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab) return;
+    // If deployed and has agentId, delete backend agent
+    if (tab.deployed && tab.agentId) {
+      try {
+        const resp = await fetch(`${BACKEND_URL}/remove-agent/${tab.agentId}`, { method: 'DELETE' });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          // Proceed but notify
+          toast.error(err.detail || `Failed to delete agent "${tab.agentId}" on backend`);
+        } else {
+          toast.success(`Agent "${tab.agentId}" deleted`);
+        }
+      } catch (e) {
+        console.error('Delete agent error:', e);
+        // Proceed but notify
+        toast.error('Network error deleting agent; closed tab locally');
+      }
+    }
+    // Remove the tab
+    setTabs(prev => {
+      const newTabs = prev.filter(t => t.id !== tabId);
+      let nextActive = activeTabId;
+      if (tabId === activeTabId) {
+        nextActive = newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null;
+      }
+      // If no tabs remain, do not auto-create a new tab; clear canvas
+      if (newTabs.length === 0) {
+        persistTabs([], null);
+        setActiveTabId(null);
+        // Clear canvas state
+        setBlocks([]);
+        setConnections([]);
+        setAgentId('');
+        blockIdCounter.current = 0;
+        setZoom(1);
+        setPanOffset({ x: 0, y: 0 });
+        return [];
+      } else {
+        persistTabs(newTabs, nextActive);
+        setActiveTabId(nextActive);
+        const active = newTabs.find(t => t.id === nextActive);
+        if (active) loadTabIntoCanvas(active);
+        return newTabs;
+      }
+    });
+  };
+
   // Load from localStorage only on client side after mount
   useEffect(() => {
     setIsClient(true);
     try {
-      const savedBlocks = localStorage.getItem('agent-builder-blocks');
-      const savedConnections = localStorage.getItem('agent-builder-connections');
-      const savedAgentId = localStorage.getItem('agent-builder-agentId');
-      const savedBlockCounter = localStorage.getItem('agent-builder-blockCounter');
+      // New tabs-based persistence
+      const savedTabsRaw = localStorage.getItem(TABS_KEY);
+      const savedActive = localStorage.getItem(ACTIVE_TAB_KEY);
 
-      if (savedBlocks) setBlocks(JSON.parse(savedBlocks));
-      if (savedConnections) setConnections(JSON.parse(savedConnections));
-      if (savedAgentId) setAgentId(savedAgentId);
-      if (savedBlockCounter) blockIdCounter.current = parseInt(savedBlockCounter, 10);
+      let parsedTabs = [];
+      if (savedTabsRaw) {
+        parsedTabs = JSON.parse(savedTabsRaw);
+      }
+
+      if (parsedTabs && parsedTabs.length > 0) {
+        // Load saved tabs, but do not auto-load a tab unless a saved active exists
+        setTabs(parsedTabs);
+        const activeId = savedActive && parsedTabs.find(t => t.id === savedActive) ? savedActive : null;
+        setActiveTabId(activeId);
+        if (activeId) {
+          const active = parsedTabs.find(t => t.id === activeId);
+          if (active) loadTabIntoCanvas(active);
+        }
+      } else {
+        // No tabs saved: start with an empty canvas and no active tab
+        setTabs([]);
+        setActiveTabId(null);
+        setBlocks([]);
+        setConnections([]);
+        setAgentId('');
+        blockIdCounter.current = 0;
+        setZoom(1);
+        setPanOffset({ x: 0, y: 0 });
+      }
+
+      tabsReadyRef.current = true;
     } catch (error) {
-      console.error('Error loading from localStorage:', error);
+      console.error('Error loading tab state:', error);
+      // Fallback: start with no tabs and empty canvas
+      setTabs([]);
+      setActiveTabId(null);
+      setBlocks([]);
+      setConnections([]);
+      setAgentId('');
+      blockIdCounter.current = 0;
+      setZoom(1);
+      setPanOffset({ x: 0, y: 0 });
+      tabsReadyRef.current = true;
     }
   }, []);
 
   // Save to localStorage whenever state changes (only on client)
   useEffect(() => {
-    if (!isClient) return; // Don't save on initial mount
-
-    try {
-      localStorage.setItem('agent-builder-blocks', JSON.stringify(blocks));
-      localStorage.setItem('agent-builder-blockCounter', blockIdCounter.current.toString());
-    } catch (error) {
-      console.error('Error saving blocks:', error);
-    }
-  }, [blocks, isClient]);
-
-  useEffect(() => {
-    if (!isClient) return;
-
-    try {
-      localStorage.setItem('agent-builder-connections', JSON.stringify(connections));
-    } catch (error) {
-      console.error('Error saving connections:', error);
-    }
-  }, [connections, isClient]);
+    if (!isClient || !tabsReadyRef.current || !activeTabId) return;
+    // Update active tab's blocks + blockCounter
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === activeTabId);
+      if (idx < 0) return prev;
+      const updated = { ...prev[idx], blocks, blockCounter: blockIdCounter.current };
+      const next = [...prev];
+      next[idx] = updated;
+      persistTabs(next, activeTabId);
+      return next;
+    });
+  }, [blocks, isClient, activeTabId]);
 
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || !tabsReadyRef.current || !activeTabId) return;
+    // Update active tab's connections
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === activeTabId);
+      if (idx < 0) return prev;
+      const updated = { ...prev[idx], connections };
+      const next = [...prev];
+      next[idx] = updated;
+      persistTabs(next, activeTabId);
+      return next;
+    });
+  }, [connections, isClient, activeTabId]);
 
-    try {
-      localStorage.setItem('agent-builder-agentId', agentId);
-    } catch (error) {
-      console.error('Error saving agentId:', error);
-    }
-  }, [agentId, isClient]);
-
-  // Poll backend for current node states
   useEffect(() => {
-    if (!isClient) return;
+    if (!isClient || !tabsReadyRef.current || !activeTabId) return;
+    // Update active tab's agentId, zoom, pan
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === activeTabId);
+      if (idx < 0) return prev;
+      const updated = { ...prev[idx], agentId, zoom, panOffset };
+      const next = [...prev];
+      next[idx] = updated;
+      persistTabs(next, activeTabId);
+      return next;
+    });
+  }, [agentId, zoom, panOffset, isClient, activeTabId]);
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`${BACKEND_URL}/agents-state`);
-        if (response.ok) {
-          const data = await response.json();
+  // Polling of backend agent states disabled per request
 
-          if (data.agents) {
-            // Detect transitions and create animations BEFORE updating state
-            const newTransitions = [];
-
-            Object.entries(data.agents).forEach(([agentId, state]) => {
-              const prevData = prevCurrentNodes.current[agentId];
-              const prevNode = prevData?.currentNode;
-              const newNode = state.current_node;
-              const toolBlock = state.last_executed_tool_block;
-              const lastAgentBlock = state.last_agent_block;
-
-              // Check if we should animate
-              // We animate when the current node changed from what we tracked before
-              const nodeChanged = prevNode !== newNode;
-
-              // Only animate if:
-              // 1. The node changed from what we had before
-              // 2. We have complete path information
-              if (nodeChanged && lastAgentBlock && toolBlock && newNode) {
-                console.log(`🎬 Animation: ${lastAgentBlock} → ${toolBlock} → ${newNode}`);
-
-                // Multi-step animation: last agent → tool → current agent
-                // First animation: previous agent block → tool block
-                newTransitions.push({
-                  id: `transition-${Date.now()}-${agentId}-1`,
-                  agentId,
-                  fromBlockId: lastAgentBlock,
-                  toBlockId: toolBlock,
-                  startTime: Date.now(),
-                  delay: 0 // Start immediately
-                });
-
-                // Second animation: tool block → current agent block
-                newTransitions.push({
-                  id: `transition-${Date.now()}-${agentId}-2`,
-                  agentId,
-                  fromBlockId: toolBlock,
-                  toBlockId: newNode,
-                  startTime: Date.now(),
-                  delay: 500 // Start after first animation fills (500ms)
-                });
-              } else if (nodeChanged && prevNode && newNode) {
-                console.log(`🎬 Animation: ${prevNode} → ${newNode}`);
-
-                // Single-step animation: direct connection (no tool block info)
-                newTransitions.push({
-                  id: `transition-${Date.now()}-${agentId}`,
-                  agentId,
-                  fromBlockId: prevNode,
-                  toBlockId: newNode,
-                  startTime: Date.now(),
-                  delay: 0
-                });
-              }
-            });
-
-            // Add new transitions to state
-            if (newTransitions.length > 0) {
-              setAnimatingTransitions(prev => [...prev, ...newTransitions]);
-            }
-
-            // Update current nodes state for next poll
-            const newCurrentNodes = {};
-            Object.entries(data.agents).forEach(([agentId, state]) => {
-              newCurrentNodes[agentId] = {
-                currentNode: state.current_node,
-                lastTool: state.last_executed_tool_block,
-                lastAgentBlock: state.last_agent_block
-              };
-            });
-
-            setCurrentNodes(newCurrentNodes);
-            prevCurrentNodes.current = newCurrentNodes;
-          }
-        }
-      } catch (error) {
-        // Silently fail - backend might not be available
-        console.debug('Failed to fetch agent states:', error);
-      }
-    }, 1000); // Poll every second
-
-    return () => clearInterval(pollInterval);
-  }, [isClient]);
+  // Auto-sync with backend endpoints disabled per request
 
   // Cleanup completed transition animations
   useEffect(() => {
@@ -327,18 +435,10 @@ export default function AgentGameBuilder() {
       setZoom(1);
       setPanOffset({ x: 0, y: 0 });
 
-      // Clear localStorage
-      try {
-        localStorage.removeItem('agent-builder-blocks');
-        localStorage.removeItem('agent-builder-connections');
-        localStorage.removeItem('agent-builder-agentId');
-        localStorage.removeItem('agent-builder-blockCounter');
-        setAgentId('');
-        blockIdCounter.current = 0;
-        toast.success('Canvas cleared and localStorage reset!');
-      } catch (error) {
-        console.error('Error clearing localStorage:', error);
-      }
+      // Reset counters/state for the active tab only
+      setAgentId('');
+      blockIdCounter.current = 0;
+      toast.success('Canvas cleared for this tab');
     }
   };
 
@@ -864,6 +964,93 @@ export default function AgentGameBuilder() {
       // Auto-stepping should now start automatically, just confirm it's running
       toast.success(`Agent "${result.agent_id}" deployed and running in the game!`);
 
+      // Save as a tab with consistency rules:
+      // - If a tab with this agentId already exists, update that tab
+      // - If you're on an agent tab and deploying a DIFFERENT agentId, create a NEW tab for the new agent
+      // - Otherwise (no active tab or same agent), update the active tab or create new if none
+      const deployedId = agentId.trim();
+      setTabs(prev => {
+        // 1) Tab with same agentId already exists
+        const existingIdx = prev.findIndex(t => t.agentId === deployedId);
+        if (existingIdx >= 0) {
+          const updated = {
+            ...prev[existingIdx],
+            title: deployedId,
+            agentId: deployedId,
+            deployed: true,
+            blocks,
+            connections,
+            blockCounter: blockIdCounter.current,
+            zoom,
+            panOffset,
+          };
+          const nextTabs = [...prev];
+          nextTabs[existingIdx] = updated;
+          persistTabs(nextTabs, nextTabs[existingIdx].id);
+          setActiveTabId(nextTabs[existingIdx].id);
+          return nextTabs;
+        }
+
+        // 2) If on an agent tab with a different agent, create a new tab
+        const activeIdx = prev.findIndex(t => t.id === activeTabId);
+        const onAgentTab =
+          activeIdx >= 0 && !!prev[activeIdx].agentId;
+        if (onAgentTab && prev[activeIdx].agentId !== deployedId) {
+          const newTab = {
+            id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: deployedId,
+            agentId: deployedId,
+            deployed: true,
+            blocks: deepClone(blocks),
+            connections: deepClone(connections),
+            blockCounter: blockIdCounter.current,
+            zoom,
+            panOffset: deepClone(panOffset),
+          };
+          const nextTabs = [...prev, newTab];
+          persistTabs(nextTabs, newTab.id);
+          setActiveTabId(newTab.id);
+          return nextTabs;
+        }
+
+        // 3) Update active tab (no active tab or same agent or not agent-bound)
+        if (activeIdx >= 0) {
+          const updated = {
+            ...prev[activeIdx],
+            title: deployedId,
+            agentId: deployedId,
+            deployed: true,
+            blocks: deepClone(blocks),
+            connections: deepClone(connections),
+            blockCounter: blockIdCounter.current,
+            zoom,
+            panOffset: deepClone(panOffset),
+          };
+          const nextTabs = [...prev];
+          nextTabs[activeIdx] = updated;
+          persistTabs(nextTabs, nextTabs[activeIdx].id);
+          setActiveTabId(nextTabs[activeIdx].id);
+          return nextTabs;
+        }
+
+        // 4) No active tab → create new
+        const newTab = {
+          id: `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          title: deployedId,
+          agentId: deployedId,
+          deployed: true,
+          blocks: deepClone(blocks),
+          connections: deepClone(connections),
+          blockCounter: blockIdCounter.current,
+          zoom,
+          panOffset: deepClone(panOffset),
+        };
+        const nextTabs = [...prev, newTab];
+        persistTabs(nextTabs, newTab.id);
+        setActiveTabId(newTab.id);
+        return nextTabs;
+      });
+
       // Refresh agents list if panel is open
       if (showAgentsPanel) {
         await fetchAgents();
@@ -1085,6 +1272,16 @@ export default function AgentGameBuilder() {
 
         {/* Bottom - Builder Container */}
         <div className="flex-1 flex relative min-h-0 overflow-hidden">
+          {/* Tabs component (fixed top-right over canvas) */}
+          <AgentTabs
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onSwitch={handleSwitchTab}
+            onClose={handleCloseTab}
+            onAdd={handleAddTab}
+            theme={theme}
+          />
+
           {/* Sidebar - Blocks Palette */}
           <div className={`w-64 ${theme.bg.secondary} border-r ${theme.border.primary} shadow-md p-4 flex-shrink-0 overflow-y-auto`}>
             <h2 className={`font-bold ${theme.text.primary} mb-4 text-xl`}>Block Builder</h2>
