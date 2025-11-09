@@ -55,6 +55,7 @@ export interface BackendGameState {
         position: { x: number; y: number };
         distance: number;
         health?: number;
+        open?: boolean;
     }>;
 }
 
@@ -351,12 +352,19 @@ export class AgentBridge {
             if (obstacle.dead) continue;
             const distSquared = Geometry.distanceSquared(agent.position, obstacle.position);
             if (distSquared <= nearbyRadiusSquared) {
-                nearbyObstacles.push({
+                const obstacleData: any = {
                     type: obstacle.definition.idString,
                     position: { x: obstacle.position.x, y: obstacle.position.y },
                     distance: Math.sqrt(distSquared),
                     health: obstacle.health
-                });
+                };
+
+                // Include open state for gates
+                if (obstacle.definition.idString === 'gate') {
+                    obstacleData.open = obstacle.open;
+                }
+
+                nearbyObstacles.push(obstacleData);
             }
         }
 

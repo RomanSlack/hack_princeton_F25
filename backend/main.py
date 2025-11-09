@@ -597,8 +597,13 @@ async def execute_agent_block(
             obstacle_context += "\n*** GATES (special interactive obstacles) ***\n"
             for gate in gates:
                 pos = gate.get('position', {})
-                obstacle_context += f"- gate at position (x={pos.get('x', 0):.1f}, y={pos.get('y', 0):.1f}), distance {gate.get('distance', 0):.1f}\n"
-            obstacle_context += "TIP: To open a gate, move near it (within 30 units) and use the 'speak' tool with the correct password!\n"
+                is_open = gate.get('open', False)
+                status = "OPEN (passable)" if is_open else "CLOSED (blocked)"
+                obstacle_context += f"- gate at position (x={pos.get('x', 0):.1f}, y={pos.get('y', 0):.1f}), distance {gate.get('distance', 0):.1f} - Status: {status}\n"
+            if not any(gate.get('open', False) for gate in gates):
+                obstacle_context += "TIP: To open a gate, move near it (within 30 units) and use the 'speak' tool with the correct password!\n"
+            else:
+                obstacle_context += "TIP: Gate is now open! You can move through it to reach the other side.\n"
 
 
     # Build attack-specific context if attack tool is available

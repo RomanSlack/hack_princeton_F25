@@ -531,6 +531,13 @@ export class Game {
 
         // Gate dividing wall is at x = 728 (ZONE_2_OFFSET_X + 128 = 600 + 128)
         const GATE_X = 728;
+        const GATE_Y = 128;
+
+        // If zone2LeftOnly is enabled, use fixed spawn centered with gate
+        if (zone2LeftOnly && preferredZone === "zone2") {
+            // Fixed spawn at (660, 128) - centered vertically with gate, left of it
+            return Vec(660, GATE_Y);
+        }
 
         let attempts = 0;
         while (attempts < 100) {
@@ -539,8 +546,8 @@ export class Game {
                 const spawn = MAP_DATA.playerSpawns[index];
                 const spawnPos = Vec(spawn.x, spawn.y);
 
-                // If zone2LeftOnly is enabled, skip spawns on or right of the gate wall
-                if (zone2LeftOnly && preferredZone === "zone2" && spawnPos.x >= GATE_X) {
+                // Skip this check since we handle zone2LeftOnly above now
+                if (false) {
                     attempts++;
                     continue;
                 }
