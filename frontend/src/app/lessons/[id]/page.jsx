@@ -1071,14 +1071,25 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
           const agentBlock = blocks.find(b => b.blockType === 'agent');
           isComplete = onAttackedBlock && agentBlock && connections.some(c => c.from === onAttackedBlock.id && c.to === agentBlock.id);
         }
+        // Special case: Check if agent is connected to BOTH move and speak blocks (lesson 1)
+        else if (blockId === 'speak' && guidelineText.includes('move') && guidelineText.includes('speak') && guidelineText.includes('agent')) {
+          const agentBlock = blocks.find(b => b.blockType === 'agent');
+          const moveBlock = blocks.find(b => b.blockType === 'tool' && b.tool_type === 'move');
+          const speakBlock = blocks.find(b => b.blockType === 'tool' && b.tool_type === 'speak');
+          const hasMoveConnection = agentBlock && moveBlock && connections.some(c => c.from === agentBlock.id && c.to === moveBlock.id);
+          const hasSpeakConnection = agentBlock && speakBlock && connections.some(c => c.from === agentBlock.id && c.to === speakBlock.id);
+          isComplete = hasMoveConnection && hasSpeakConnection;
+        }
         // Check if agent is connected to a tool block
-        else if ((blockId === 'move' || blockId === 'plan' || blockId === 'attack' || blockId === 'collect') && guidelineText.includes('agent')) {
+        else if ((blockId === 'move' || blockId === 'plan' || blockId === 'attack' || blockId === 'collect' || blockId === 'speak' || blockId === 'search') && guidelineText.includes('agent')) {
           const agentBlock = blocks.find(b => b.blockType === 'agent');
           const toolBlock = blocks.find(b => {
             if (blockId === 'move') return b.blockType === 'tool' && b.tool_type === 'move';
             if (blockId === 'plan') return b.blockType === 'tool' && b.tool_type === 'plan';
             if (blockId === 'attack') return b.blockType === 'tool' && b.tool_type === 'attack';
             if (blockId === 'collect') return b.blockType === 'tool' && b.tool_type === 'collect';
+            if (blockId === 'speak') return b.blockType === 'tool' && b.tool_type === 'speak';
+            if (blockId === 'search') return b.blockType === 'tool' && b.tool_type === 'search';
             return false;
           });
           isComplete = agentBlock && toolBlock && connections.some(c => c.from === agentBlock.id && c.to === toolBlock.id);
@@ -1126,6 +1137,12 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
       else if (blockId === 'collect' && !guidelineText.includes('Connect')) {
         isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'collect');
       }
+      else if (blockId === 'speak' && !guidelineText.includes('Connect')) {
+        isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'speak');
+      }
+      else if (blockId === 'search' && !guidelineText.includes('Connect')) {
+        isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'search');
+      }
       // Check for multiple blocks of a type
       else if (guidelineText.includes('multiple')) {
         if (blockId === 'agent' || guidelineText.includes('multiple') && guidelineText.includes('agent')) {
@@ -1153,8 +1170,8 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
       }
       // Check for "Add" tasks with blocks
       else if (guidelineText.includes('Add') && blockId) {
-        if (blockId === 'plan' || blockId === 'move' || blockId === 'attack' || blockId === 'collect') {
-          const toolType = blockId === 'plan' ? 'plan' : blockId === 'move' ? 'move' : blockId === 'attack' ? 'attack' : 'collect';
+        if (blockId === 'plan' || blockId === 'move' || blockId === 'attack' || blockId === 'collect' || blockId === 'speak' || blockId === 'search') {
+          const toolType = blockId === 'plan' ? 'plan' : blockId === 'move' ? 'move' : blockId === 'attack' ? 'attack' : blockId === 'collect' ? 'collect' : blockId === 'speak' ? 'speak' : 'search';
           isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === toolType);
         }
       }
