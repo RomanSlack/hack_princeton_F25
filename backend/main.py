@@ -11,6 +11,7 @@ import os
 from game_client import GameEnvironmentClient
 from openai import OpenAI
 from abc import ABC, abstractmethod
+import json
 
 load_dotenv()
 
@@ -120,14 +121,36 @@ class DaedalusProvider(LLMProvider):
             )
 
 
+def web_search(query: str, max_results: int = 5) -> str:
+    """Perform web search using DuckDuckGo and return results as formatted string"""
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+            if not results:
+                return "No results found."
+
+            formatted_results = []
+            for i, result in enumerate(results, 1):
+                formatted_results.append(
+                    f"{i}. {result.get('title', 'No title')}\n"
+                    f"   {result.get('body', 'No description')}\n"
+                    f"   URL: {result.get('href', 'No URL')}"
+                )
+            return "\n\n".join(formatted_results)
+    except Exception as e:
+        logger.error(f"Web search error: {e}")
+        return f"Search failed: {str(e)}"
+
+
 class OpenAIProvider(LLMProvider):
-    """Direct OpenAI API provider - faster, simpler, but no MCP support"""
+    """Direct OpenAI API provider with function calling support for web search"""
 
     def __init__(self):
         if not OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
         self.client = OpenAI(api_key=OPENAI_API_KEY)
-        logger.info("✓ OpenAI direct API provider initialized (no MCP support)")
+        logger.info("✓ OpenAI direct API provider initialized (with function calling support)")
 
     def _normalize_model_name(self, model: str) -> str:
         """Convert Daedalus-style model names to OpenAI model names"""
@@ -147,32 +170,109 @@ class OpenAIProvider(LLMProvider):
         mcp_servers: Optional[List[str]] = None,
         timeout: float = LLM_TIMEOUT
     ) -> LLMResponse:
-        """Run inference through OpenAI API directly"""
-        if mcp_servers:
-            logger.warning(f"MCP servers {mcp_servers} requested but not supported with OpenAI provider. Ignoring.")
+        """Run inference through OpenAI API with function calling for web search"""
+        # Enable web search if MCP servers include "search" or similar
+        enable_search = bool(mcp_servers and any("search" in s.lower() for s in mcp_servers))
+        if mcp_servers and enable_search:
+            logger.info(f"Enabling web search function for OpenAI provider (MCP servers: {mcp_servers})")
 
         normalized_model = self._normalize_model_name(model)
         logger.info(f"Calling OpenAI API with model: {normalized_model}")
 
         try:
+            # Define search function for function calling
+            tools = []
+            if enable_search:
+                tools.append({
+                    "type": "function",
+                    "function": {
+                        "name": "web_search",
+                        "description": "Search the web for information. Use this to find current information, facts, strategies, or answers to questions you don't know.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "The search query to look up"
+                                },
+                                "max_results": {
+                                    "type": "integer",
+                                    "description": "Maximum number of results to return (default: 5)",
+                                    "default": 5
+                                }
+                            },
+                            "required": ["query"]
+                        }
+                    }
+                })
+
+            messages = [{"role": "user", "content": input}]
+
             # Run in executor to avoid blocking
             loop = asyncio.get_event_loop()
+
+            # First API call with potential function calling
             response = await asyncio.wait_for(
                 loop.run_in_executor(
                     None,
                     lambda: self.client.chat.completions.create(
                         model=normalized_model,
-                        messages=[
-                            {"role": "user", "content": input}
-                        ],
+                        messages=messages,
                         temperature=0.7,
-                        max_tokens=500
+                        max_tokens=500,
+                        tools=tools if tools else None,
+                        tool_choice="auto" if tools else None
                     )
                 ),
                 timeout=timeout
             )
 
-            final_output = response.choices[0].message.content
+            response_message = response.choices[0].message
+
+            # Check if the model wants to call a function
+            if response_message.tool_calls:
+                # Extend conversation with function call
+                messages.append(response_message)
+
+                # Execute each function call
+                for tool_call in response_message.tool_calls:
+                    function_name = tool_call.function.name
+                    function_args = json.loads(tool_call.function.arguments)
+
+                    logger.info(f"Function call: {function_name}({function_args})")
+
+                    if function_name == "web_search":
+                        function_response = web_search(
+                            query=function_args.get("query"),
+                            max_results=function_args.get("max_results", 5)
+                        )
+                        logger.info(f"Search results length: {len(function_response)} chars")
+
+                        # Add function response to messages
+                        messages.append({
+                            "tool_call_id": tool_call.id,
+                            "role": "tool",
+                            "name": function_name,
+                            "content": function_response
+                        })
+
+                # Second API call with function results
+                final_response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda: self.client.chat.completions.create(
+                            model=normalized_model,
+                            messages=messages,
+                            temperature=0.7,
+                            max_tokens=500
+                        )
+                    ),
+                    timeout=timeout
+                )
+                final_output = final_response.choices[0].message.content
+            else:
+                final_output = response_message.content
+
             return LLMResponse(final_output=final_output)
 
         except asyncio.TimeoutError:

@@ -42,6 +42,7 @@ Real-time multiplayer battle arena built with TypeScript/Bun:
 - Dynamic obstacle destruction
 - WebSocket-based multiplayer
 
+<img src="readme_Images/techstack.jpg" width="50%" alt="Tech Stack">
 <img src="readme_Images/map.png" width="50%" alt="Game Map">
 
 ## Key Features
