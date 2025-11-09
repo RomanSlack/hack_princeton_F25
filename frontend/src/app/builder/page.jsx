@@ -405,35 +405,54 @@ export default function AgentGameBuilder() {
               // 2. We have complete path information
               if (nodeChanged && lastAgentBlock && toolBlock && newNode) {
                 // Multi-step animation: last agent → tool → current agent
-                // First animation: previous agent block → tool block
-                newTransitions.push({
-                  id: `transition-${Date.now()}-${agentId}-1`,
-                  agentId,
-                  fromBlockId: lastAgentBlock,
-                  toBlockId: toolBlock,
-                  startTime: Date.now(),
-                  delay: 0 // Start immediately
-                });
+                // Check if first connection exists: agent → tool
+                const firstConnectionExists = connections.some(
+                  conn => conn.from === lastAgentBlock && conn.to === toolBlock
+                );
 
-                // Second animation: tool block → current agent block
-                newTransitions.push({
-                  id: `transition-${Date.now()}-${agentId}-2`,
-                  agentId,
-                  fromBlockId: toolBlock,
-                  toBlockId: newNode,
-                  startTime: Date.now(),
-                  delay: 500 // Start after first animation fills (500ms)
-                });
+                if (firstConnectionExists) {
+                  newTransitions.push({
+                    id: `transition-${Date.now()}-${agentId}-1`,
+                    agentId,
+                    fromBlockId: lastAgentBlock,
+                    toBlockId: toolBlock,
+                    startTime: Date.now(),
+                    delay: 0 // Start immediately
+                  });
+                }
+
+                // Check if second connection exists: tool → next agent block
+                const secondConnectionExists = connections.some(
+                  conn => conn.from === toolBlock && conn.to === newNode
+                );
+
+                if (secondConnectionExists) {
+                  newTransitions.push({
+                    id: `transition-${Date.now()}-${agentId}-2`,
+                    agentId,
+                    fromBlockId: toolBlock,
+                    toBlockId: newNode,
+                    startTime: Date.now(),
+                    delay: firstConnectionExists ? 500 : 0 // Only delay if first animation exists
+                  });
+                }
               } else if (nodeChanged && prevNode && newNode) {
                 // Single-step animation: direct connection (no tool block info)
-                newTransitions.push({
-                  id: `transition-${Date.now()}-${agentId}`,
-                  agentId,
-                  fromBlockId: prevNode,
-                  toBlockId: newNode,
-                  startTime: Date.now(),
-                  delay: 0
-                });
+                // Check if connection exists before animating
+                const connectionExists = connections.some(
+                  conn => conn.from === prevNode && conn.to === newNode
+                );
+
+                if (connectionExists) {
+                  newTransitions.push({
+                    id: `transition-${Date.now()}-${agentId}`,
+                    agentId,
+                    fromBlockId: prevNode,
+                    toBlockId: newNode,
+                    startTime: Date.now(),
+                    delay: 0
+                  });
+                }
               }
             });
 
@@ -1647,7 +1666,7 @@ export default function AgentGameBuilder() {
                             stroke-dashoffset: 0;
                           }
                           100% {
-                            stroke-dashoffset: -${estimatedLength};
+                            stroke-dashoffset: 0;
                           }
                         }
                         @keyframes ${fadeKeyframe} {
@@ -1661,7 +1680,7 @@ export default function AgentGameBuilder() {
                             opacity: 1;
                           }
                           100% {
-                            opacity: 1;
+                            opacity: 0;
                           }
                         }
                         @keyframes ${arrowheadFadeKeyframe} {
@@ -2280,6 +2299,14 @@ function MiniAgentPreview({ tab, theme, currentNodes, animatingTransitions }) {
         {/* Animated transitions (flowing highlight) */}
         {Array.isArray(animatingTransitions) &&
           animatingTransitions.map((transition) => {
+            // Check if connection exists - skip animation if not
+            const connectionExists = connections.some(
+              conn => conn.from === transition.fromBlockId && conn.to === transition.toBlockId
+            );
+            if (!connectionExists) {
+              return null;
+            }
+
             const from = miniGetBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
             const to = miniGetBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
             const toExtended = miniExtendToArrowheadTip(to, to.edge);
@@ -2324,13 +2351,13 @@ function MiniAgentPreview({ tab, theme, currentNodes, animatingTransitions }) {
                       0% { stroke-dashoffset: ${estimatedLength}; }
                       33% { stroke-dashoffset: 0; }
                       66% { stroke-dashoffset: 0; }
-                      100% { stroke-dashoffset: -${estimatedLength}; }
+                      100% { stroke-dashoffset: 0; }
                     }
                     @keyframes ${fadeKeyframe} {
                       0% { opacity: 0; }
                       5% { opacity: 1; }
                       66% { opacity: 1; }
-                      100% { opacity: 1; }
+                      100% { opacity: 0; }
                     }
                     @keyframes ${arrowheadFadeKeyframe} {
                       0% { opacity: 0; }
