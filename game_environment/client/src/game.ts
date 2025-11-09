@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Vec, type Vector } from "../../common/src/utils/vector";
+import { Geometry } from "../../common/src/utils/math";
 import { Camera } from "./camera";
 import { InputManager } from "./input";
 import { HUD } from "./hud";
@@ -18,6 +19,16 @@ interface RenderObject {
     leavesContainer?: PIXI.Container; // Separate container for tree leaves (rendered above players)
     weaponSprite?: PIXI.Graphics;
     punchAnimation?: { startTime: number; duration: number };
+    lastPosition?: Vector; // Track previous position for movement detection
+    lastDeadState?: boolean; // Track death state transitions
+}
+
+interface MovementParticle {
+    sprite: PIXI.Graphics;
+    spawnTime: number;
+    lifetime: number;
+    position: Vector;
+    velocity?: Vector; // Optional velocity for moving particles (blood explosion)
 }
 
 export class GameClient {
@@ -42,6 +53,11 @@ export class GameClient {
     private lastUpdateTime = 0;
     private grassBackground!: PIXI.Graphics;
     private lightingSystem!: LightingSystem;
+
+    // Movement particles
+    private particleContainer!: PIXI.Container;
+    private movementParticles: MovementParticle[] = [];
+    private particleSpawnTimer: Map<number, number> = new Map(); // Throttle particle spawn per player
 
     constructor() {
         this.app = new PIXI.Application();
@@ -78,6 +94,11 @@ export class GameClient {
 
         // Enable z-index sorting for proper layer ordering
         this.app.stage.sortableChildren = true;
+
+        // Create particle container (renders below players)
+        this.particleContainer = new PIXI.Container();
+        this.particleContainer.zIndex = 5; // Above grass (0), below players (10)
+        this.app.stage.addChild(this.particleContainer);
 
         // Initialize input manager after canvas is created
         this.input = new InputManager(this.app.canvas as HTMLCanvasElement);
@@ -219,8 +240,20 @@ export class GameClient {
                 renderObj = this.createPlayerSprite(playerData);
                 this.playerSprites.set(playerData.id, renderObj);
             }
+
             renderObj.position = Vec(playerData.x, playerData.y);
             renderObj.rotation = playerData.rotation;
+
+            // Detect movement and spawn particles
+            if (renderObj.lastPosition && !playerData.dead) {
+                const distance = Geometry.distance(renderObj.lastPosition, renderObj.position);
+                const minMovementThreshold = 0.5; // Only spawn particles if moved at least this much
+
+                if (distance > minMovementThreshold) {
+                    this.spawnMovementParticles(playerData.id, renderObj.lastPosition, renderObj.position);
+                }
+            }
+            renderObj.lastPosition = Vec.clone(renderObj.position);
 
             // Update XP text
             if (renderObj.xpText) {
@@ -235,10 +268,20 @@ export class GameClient {
                 }
             }
 
-            // Update player dead state
+            // Update player dead state and detect death transitions
             if (playerData.dead) {
-                renderObj.container.alpha = 0.3;
+                // Make dead characters completely invisible
+                renderObj.container.alpha = 0;
+
+                // Detect death transition (just died)
+                if (!renderObj.lastDeadState) {
+                    this.spawnDeathParticles(renderObj.position);
+                }
+            } else {
+                // Ensure alive characters are fully visible
+                renderObj.container.alpha = 1;
             }
+            renderObj.lastDeadState = playerData.dead;
         }
 
         // Update camera
@@ -417,6 +460,9 @@ export class GameClient {
             this.grassBackground.scale.set(this.camera.zoom);
         }
 
+        // Render movement particles (transform to screen space)
+        this.renderMovementParticles();
+
         // Render obstacles (bottom layer - trunks only)
         for (const [_id, obj] of this.obstacleSprites.entries()) {
             const screenPos = this.camera.worldToScreen(obj.position);
@@ -490,6 +536,9 @@ export class GameClient {
                 obj.container.alpha = 0.8;
             }
         }
+
+        // Clean up expired particles (done in handleUpdate, not render)
+        this.cleanupExpiredParticles();
 
         // Render bullets with sprite-based trails
         for (const [id, sprite] of this.bulletSprites.entries()) {
@@ -855,19 +904,19 @@ export class GameClient {
         if (texture) {
             const sprite = new PIXI.Sprite(texture);
             sprite.anchor.set(0.5, 0.5);
-            sprite.scale.set(0.08);  // 2x larger (was 0.04)
+            sprite.scale.set(0.16);  // 4x larger than original (was 0.04, then 0.08)
             container.addChild(sprite);
         } else {
-            // Fallback - 2x larger
+            // Fallback - 4x larger than original
             const color = lootData.type.includes('ammo') ? 0xFFA500 : 0xFFD700;
             const graphic = new PIXI.Graphics();
             if (lootData.type.includes('ammo')) {
-                graphic.rect(-2, -1, 4, 2);  // 2x size
+                graphic.rect(-4, -2, 8, 4);  // 4x size
             } else {
-                graphic.rect(-3, -0.6, 6, 1.2);  // 2x size
+                graphic.rect(-6, -1.2, 12, 2.4);  // 4x size
             }
             graphic.fill({ color });
-            graphic.stroke({ color: 0x000000, width: 0.15 });
+            graphic.stroke({ color: 0x000000, width: 0.3 });
             container.addChild(graphic);
         }
 
@@ -920,5 +969,148 @@ export class GameClient {
         const g = ((color >> 8) & 0xFF) * factor;
         const b = (color & 0xFF) * factor;
         return (Math.floor(r) << 16) | (Math.floor(g) << 8) | Math.floor(b);
+    }
+
+    private spawnDeathParticles(position: Vector): void {
+        const now = Date.now();
+
+        // Spawn 15-25 blood particles in explosion pattern
+        const numParticles = 15 + Math.floor(Math.random() * 11);
+
+        for (let i = 0; i < numParticles; i++) {
+            // Radial explosion pattern (360 degrees)
+            const angle = (Math.PI * 2 * i) / numParticles + (Math.random() - 0.5) * 0.3;
+            const speed = 0.8 + Math.random() * 1.2; // 0.8-2.0 units per 100ms
+            const velocity = Vec(Math.cos(angle) * speed, Math.sin(angle) * speed);
+
+            // Slight random offset from center
+            const offsetRadius = Math.random() * 0.3;
+            const particlePos = Vec.add(position, Vec(
+                Math.cos(angle) * offsetRadius,
+                Math.sin(angle) * offsetRadius
+            ));
+
+            // Create blood particle
+            const particle = new PIXI.Graphics();
+            const size = 0.5 + Math.random() * 0.7; // 0.5-1.2 units
+            particle.circle(0, 0, size);
+
+            // Blood red colors
+            const bloodColors = [0xFF0000, 0xCC0000, 0x990000, 0x660000];
+            const color = bloodColors[Math.floor(Math.random() * bloodColors.length)];
+            particle.fill({ color, alpha: 0.9 });
+
+            this.particleContainer.addChild(particle);
+
+            // Store particle data with velocity
+            this.movementParticles.push({
+                sprite: particle,
+                spawnTime: now,
+                lifetime: 600 + Math.random() * 600, // 600-1200ms
+                position: particlePos,
+                velocity: velocity
+            });
+        }
+    }
+
+    private spawnMovementParticles(playerId: number, fromPos: Vector, toPos: Vector): void {
+        const now = Date.now();
+        const lastSpawn = this.particleSpawnTimer.get(playerId) || 0;
+        const spawnInterval = 30; // Spawn particles every 30ms when moving (was 50ms)
+
+        // Throttle particle spawning
+        if (now - lastSpawn < spawnInterval) {
+            return;
+        }
+
+        this.particleSpawnTimer.set(playerId, now);
+
+        // Calculate movement direction
+        const direction = Vec.sub(toPos, fromPos);
+        const distance = Geometry.distance(fromPos, toPos);
+
+        // Spawn 3-4 particles behind the player (was 1-2)
+        const numParticles = distance > 2 ? 4 : 3;
+
+        for (let i = 0; i < numParticles; i++) {
+            // Spawn at feet position (slightly behind movement direction)
+            const offset = -0.5 - (i * 0.25);
+            const normalizedDir = Vec.normalize(direction);
+            const particlePos = Vec.add(fromPos, Vec.scale(normalizedDir, offset));
+
+            // Add slight random spread
+            const spread = 0.6; // Increased from 0.4
+            const randomOffset = Vec(
+                (Math.random() - 0.5) * spread,
+                (Math.random() - 0.5) * spread
+            );
+            const finalPos = Vec.add(particlePos, randomOffset);
+
+            // Create brown dust particle
+            const particle = new PIXI.Graphics();
+            const size = 0.4 + Math.random() * 0.5; // Larger: 0.4-0.9 units (was 0.3-0.6)
+            particle.circle(0, 0, size);
+
+            // Brown/tan dust colors
+            const dustColors = [0x8B7355, 0xA0826D, 0x9C7C57, 0x8B6F47];
+            const color = dustColors[Math.floor(Math.random() * dustColors.length)];
+            particle.fill({ color, alpha: 0.8 }); // Increased from 0.6
+
+            this.particleContainer.addChild(particle);
+
+            // Store particle data
+            this.movementParticles.push({
+                sprite: particle,
+                spawnTime: now,
+                lifetime: 400 + Math.random() * 300, // Longer: 400-700ms (was 300-500ms)
+                position: finalPos
+            });
+        }
+    }
+
+    private cleanupExpiredParticles(): void {
+        const now = Date.now();
+
+        // Remove expired particles
+        for (let i = this.movementParticles.length - 1; i >= 0; i--) {
+            const particle = this.movementParticles[i];
+            const age = now - particle.spawnTime;
+            const progress = age / particle.lifetime;
+
+            if (progress >= 1) {
+                this.particleContainer.removeChild(particle.sprite);
+                particle.sprite.destroy();
+                this.movementParticles.splice(i, 1);
+            }
+        }
+    }
+
+    private renderMovementParticles(): void {
+        const now = Date.now();
+        const dt = 33; // Approximate frame time (30fps)
+
+        for (const particle of this.movementParticles) {
+            const age = now - particle.spawnTime;
+            const progress = age / particle.lifetime;
+
+            // Update position if particle has velocity (blood particles)
+            if (particle.velocity) {
+                // Apply velocity with decay
+                const velocityDecay = 0.95; // Slow down over time
+                particle.position = Vec.add(particle.position, Vec.scale(particle.velocity, dt / 100));
+                particle.velocity = Vec.scale(particle.velocity, velocityDecay);
+            }
+
+            // Transform to screen space
+            const screenPos = this.camera.worldToScreen(particle.position);
+            particle.sprite.position.set(screenPos.x, screenPos.y);
+
+            // Fade out over lifetime
+            particle.sprite.alpha = (1 - progress) * 0.8;
+
+            // Slight expansion with camera zoom
+            const scale = (1 + progress * 0.3) * this.camera.zoom;
+            particle.sprite.scale.set(scale);
+        }
     }
 }
