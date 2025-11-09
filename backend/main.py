@@ -586,7 +586,6 @@ async def execute_agent_block(
     if nearby_obstacles:
         destructible = [o for o in nearby_obstacles if o.get('type') in ['tree', 'rock', 'crate']]
         gates = [o for o in nearby_obstacles if o.get('type') == 'gate']
-        crowns = [o for o in nearby_obstacles if o.get('type') == 'crown']
 
         if destructible:
             obstacle_context = "\n*** NEARBY OBSTACLES (can block shots!) ***\n"
@@ -599,14 +598,8 @@ async def execute_agent_block(
             for gate in gates:
                 pos = gate.get('position', {})
                 obstacle_context += f"- gate at position (x={pos.get('x', 0):.1f}, y={pos.get('y', 0):.1f}), distance {gate.get('distance', 0):.1f}\n"
-            obstacle_context += "TIP: To open a gate, move near it (within 30 units) and use the 'speak' tool with password 'zohran mamdani'!\n"
+            obstacle_context += "TIP: To open a gate, move near it (within 30 units) and use the 'speak' tool with the correct password!\n"
 
-        if crowns:
-            obstacle_context += "\n*** CROWN (goal object!) ***\n"
-            for crown in crowns:
-                pos = crown.get('position', {})
-                obstacle_context += f"- crown at position (x={pos.get('x', 0):.1f}, y={pos.get('y', 0):.1f}), distance {crown.get('distance', 0):.1f} units\n"
-            obstacle_context += "TIP: Reach the crown to complete your objective!\n"
 
     # Build attack-specific context if attack tool is available
     attack_context = ""
@@ -671,7 +664,7 @@ async def execute_agent_block(
         f"- Attack: {{\"reasoning\": \"Shooting enemy\", \"action\": \"attack\", \"parameters\": {{\"target_player_id\": \"3\"}}}}\n"
         f"- Collect: {{\"reasoning\": \"Picking up ammo\", \"action\": \"collect\", \"parameters\": {{}}}}\n"
         f"- Switch weapon: {{\"reasoning\": \"Switching to fists since pistol is empty\", \"action\": \"switch_weapon\", \"parameters\": {{}}}}\n"
-        f"- Speak: {{\"reasoning\": \"Trying to unlock the gate\", \"action\": \"speak\", \"parameters\": {{\"text\": \"zohran mamdani\"}}}}"
+        f"- Speak: {{\"reasoning\": \"Trying to unlock the gate\", \"action\": \"speak\", \"parameters\": {{\"text\": \"your password here\"}}}}"
     )
 
     full_input = agent_block.system_prompt + "\n\n" + user_input

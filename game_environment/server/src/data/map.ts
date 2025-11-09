@@ -194,8 +194,6 @@ const ZONE_2_DATA = {
         // Bottom section of dividing wall (from gate to bottom)
         { type: "wall_vertical", x: ZONE_2_OFFSET_X + 128, y: ZONE_2_OFFSET_Y + 200, rotation: 0, scale: 0.21875 }, // 112 tall (256*0.21875)
 
-        // Crown on right side (goal object behind gate)
-        { type: "crown", x: ZONE_2_OFFSET_X + 200, y: ZONE_2_OFFSET_Y + 128, rotation: 0, scale: 1.5 },
 
         // 3 trees near perimeter
         { type: "tree", x: ZONE_2_OFFSET_X + 30, y: ZONE_2_OFFSET_Y + 30, rotation: 0, scale: 1.0 },   // Top-left corner
@@ -211,7 +209,8 @@ const ZONE_2_DATA = {
     ],
 
     loot: [
-        // NO LOOT IN ZONE 2
+        // Special red XP orb on right side behind gate (goal object)
+        { type: "xp_orb", x: ZONE_2_OFFSET_X + 200, y: ZONE_2_OFFSET_Y + 128 },
     ],
 
     playerSpawns: [

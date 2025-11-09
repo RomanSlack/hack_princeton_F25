@@ -23,14 +23,14 @@ const LESSON_CONFIGS = {
     showConnections: true,
     preferredZone: 'zone2',
     zone2LeftOnly: true,
-    lessonBlurb: 'Agentic AI refers to AI systems that can accomplish goals with limited supervision. In this challenge, your agent spawns in Zone 2 and must navigate to the gate, speak the password "zohran mamdani" to unlock it, then reach the crown on the other side!',
+    lessonBlurb: 'Agentic AI refers to AI systems that can accomplish goals with limited supervision. In this challenge, your agent spawns in Zone 2 and must navigate to the gate, speak the correct password to unlock it, then collect the special XP orb on the other side!',
     lessonGuidelines: [
       { text: 'Enter an Agent ID in the sidebar (e.g., "my_agent") - this gives your agent a name' },
       { text: 'Drag an', block: 'onStart', textAfter: 'block onto the canvas - this is where your agent begins' },
       { text: 'Connect it to an', block: 'agent', textAfter: 'block - this lets your agent think and make choices' },
       { text: 'Connect the agent to', block: 'move', textAfter: 'and', block: 'speak', textAfter: 'blocks' },
-      { text: 'Configure your agent to navigate to the gate and speak "zohran mamdani"' },
-      { text: 'Once the gate opens, move through it and reach the crown to complete the challenge!' },
+      { text: 'Configure your agent to navigate to the gate and figure out the password to speak' },
+      { text: 'Once the gate opens, move through it and collect the XP orb to complete the challenge!' },
     ],
   },
   2: {
