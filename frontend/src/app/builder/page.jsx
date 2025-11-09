@@ -130,6 +130,7 @@ export default function AgentGameBuilder() {
   const [registeredAgents, setRegisteredAgents] = useState([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [showAgentsPanel, setShowAgentsPanel] = useState(false);
+  const [showGridView, setShowGridView] = useState(false);
 
   // Tabs state
   const [tabs, setTabs] = useState([]); // [{ id, title, agentId, deployed, blocks, connections, blockCounter, zoom, panOffset }]
@@ -374,7 +375,95 @@ export default function AgentGameBuilder() {
     });
   }, [agentId, zoom, panOffset, isClient, activeTabId]);
 
-  // Polling of backend agent states disabled per request
+  // Poll backend for current node states (restore highlighting/animations)
+  useEffect(() => {
+    if (!isClient) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/agents-state`);
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.agents) {
+            // Detect transitions and create animations BEFORE updating state
+            const newTransitions = [];
+
+            Object.entries(data.agents).forEach(([agentId, state]) => {
+              const prevData = prevCurrentNodes.current[agentId];
+              const prevNode = prevData?.currentNode;
+              const newNode = state.current_node;
+              const toolBlock = state.last_executed_tool_block;
+              const lastAgentBlock = state.last_agent_block;
+
+              // Check if we should animate
+              // We animate when the current node changed from what we tracked before
+              const nodeChanged = prevNode !== newNode;
+
+              // Only animate if:
+              // 1. The node changed from what we had before
+              // 2. We have complete path information
+              if (nodeChanged && lastAgentBlock && toolBlock && newNode) {
+                // Multi-step animation: last agent → tool → current agent
+                // First animation: previous agent block → tool block
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}-1`,
+                  agentId,
+                  fromBlockId: lastAgentBlock,
+                  toBlockId: toolBlock,
+                  startTime: Date.now(),
+                  delay: 0 // Start immediately
+                });
+
+                // Second animation: tool block → current agent block
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}-2`,
+                  agentId,
+                  fromBlockId: toolBlock,
+                  toBlockId: newNode,
+                  startTime: Date.now(),
+                  delay: 500 // Start after first animation fills (500ms)
+                });
+              } else if (nodeChanged && prevNode && newNode) {
+                // Single-step animation: direct connection (no tool block info)
+                newTransitions.push({
+                  id: `transition-${Date.now()}-${agentId}`,
+                  agentId,
+                  fromBlockId: prevNode,
+                  toBlockId: newNode,
+                  startTime: Date.now(),
+                  delay: 0
+                });
+              }
+            });
+
+            // Add new transitions to state
+            if (newTransitions.length > 0) {
+              setAnimatingTransitions(prev => [...prev, ...newTransitions]);
+            }
+
+            // Update current nodes state for next poll
+            const newCurrentNodes = {};
+            Object.entries(data.agents).forEach(([agentId, state]) => {
+              newCurrentNodes[agentId] = {
+                currentNode: state.current_node,
+                lastTool: state.last_executed_tool_block,
+                lastAgentBlock: state.last_agent_block
+              };
+            });
+
+            setCurrentNodes(newCurrentNodes);
+            prevCurrentNodes.current = newCurrentNodes;
+          }
+        }
+      } catch (error) {
+        // Silently fail - backend might not be available
+        console.debug('Failed to fetch agent states:', error);
+      }
+    }, 1000); // Poll every second
+
+    return () => clearInterval(pollInterval);
+  }, [isClient]);
 
   // Auto-sync with backend endpoints disabled per request
 
@@ -1222,7 +1311,7 @@ export default function AgentGameBuilder() {
       </div>
 
       {/* Right Side - Instructions & Builder Area (3/5 width) */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden h-full relative">
         {/* Top - Instructions Section */}
         <div className={`${theme.bg.secondary} border-b ${theme.border.primary} shadow-sm flex-shrink-0 overflow-hidden`}>
           <div className="px-6 py-2.5 flex items-center justify-between gap-3">
@@ -1269,6 +1358,43 @@ export default function AgentGameBuilder() {
             ))}
           </div>
         </div>
+
+        {/* Grid View overlay - covers Instructions + Block Builder + Canvas */}
+        {showGridView && (
+          <div className="absolute inset-0 z-30">
+            <div className={`w-full h-full ${theme.bg.secondary} ${theme.text.primary} border-l ${theme.border.primary} shadow-xl overflow-auto`}>
+              <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: theme.isDark ? '#404040' : '#e5e7eb' }}>
+                <h3 className="font-bold">Grid View</h3>
+                <button
+                  onClick={() => setShowGridView(false)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-md ${theme.bg.hover}`}
+                  aria-label="Close Grid View"
+                  title="Close"
+                >
+                  ×
+                </button>
+              </div>
+              {/* Sidebar content area */}
+              <div className="p-4">
+                {tabs.length === 0 ? (
+                  <div className={`text-sm ${theme.text.secondary}`}>No agents yet. Create or deploy an agent to see it here.</div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {tabs.map((t) => (
+                      <MiniAgentPreview
+                        key={t.id}
+                        tab={t}
+                        theme={theme}
+                        currentNodes={currentNodes}
+                        animatingTransitions={animatingTransitions.filter(tr => tr.agentId === t.agentId)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bottom - Builder Container */}
         <div className="flex-1 flex relative min-h-0 overflow-hidden">
@@ -1408,6 +1534,19 @@ export default function AgentGameBuilder() {
               }
             }}
           >
+            {/* Grid View trigger (top-left of canvas) */}
+            <button
+              type="button"
+              onClick={() => setShowGridView(true)}
+              className="absolute z-20"
+              style={{ top: 8, left: 8 }}
+              aria-label="Open Grid View"
+            >
+              <div className={`px-3 py-1.5 rounded-md border ${theme.border.primary} ${theme.bg.secondary} ${theme.text.secondary} font-semibold`}>
+                Grid View
+              </div>
+            </button>
+
             {/* SVG for connections */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
               {/* Black arrows - render first (bottom layer) */}
@@ -1938,6 +2077,327 @@ export default function AgentGameBuilder() {
           },
         }}
       />
+    </div>
+  );
+}
+
+// Read-only miniature preview of an agent's blocks/connections
+function MiniAgentPreview({ tab, theme, currentNodes, animatingTransitions }) {
+  const blocks = Array.isArray(tab?.blocks) ? tab.blocks : [];
+  const connections = Array.isArray(tab?.connections) ? tab.connections : [];
+
+  // Default size for preview blocks (consistent sizing)
+  const BW = 120; // block width
+  const BH = 44;  // block height
+  const PADDING = 40;
+
+  if (!blocks || blocks.length === 0) {
+    return (
+      <div
+        className={`relative border ${theme.border.primary} rounded-lg ${theme.bg.canvas} overflow-hidden select-none`}
+        style={{
+          height: 220,
+          backgroundImage: theme.isDark
+            ? 'radial-gradient(circle, #404040 1px, transparent 1px)'
+            : 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          backgroundPosition: '0 0'
+        }}
+      >
+        <div className={`absolute top-2 right-2 text-xs font-semibold ${theme.text.secondary}`}>
+          {tab?.agentId || tab?.title || 'Untitled'}
+        </div>
+        <div className={`w-full h-full flex items-center justify-center text-xs ${theme.text.secondary}`}>
+          Empty
+        </div>
+      </div>
+    );
+  }
+
+  // Compute bounds from block positions to create an SVG viewBox that fits content
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const b of blocks) {
+    minX = Math.min(minX, b.x);
+    minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + BW);
+    maxY = Math.max(maxY, b.y + BH);
+  }
+  const vbX = Math.max(0, minX - PADDING);
+  const vbY = Math.max(0, minY - PADDING);
+  const vbW = Math.max(BW + PADDING * 2, maxX - minX + PADDING * 2);
+  const vbH = Math.max(BH + PADDING * 2, maxY - minY + PADDING * 2);
+
+  // Helper to get block by id
+  const getBlockById = (id) => blocks.find(b => b.id === id);
+
+  // Helpers to match main canvas arrow math (without zoom/pan; fixed BW/BH)
+  const miniGetBlockConnectionPoint = (blockId, targetBlockId) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return { x: 0, y: 0, edge: null };
+
+    const blockX = block.x;
+    const blockY = block.y;
+    const blockWidth = BW;
+    const blockHeight = BH;
+
+    const centerX = blockX + blockWidth / 2;
+    const centerY = blockY + blockHeight / 2;
+
+    if (!targetBlockId) {
+      return { x: centerX, y: centerY, edge: null };
+    }
+
+    const targetBlock = blocks.find(b => b.id === targetBlockId);
+    if (!targetBlock) return { x: centerX, y: centerY, edge: null };
+
+    const targetX = targetBlock.x;
+    const targetY = targetBlock.y;
+    const targetWidth = BW;
+    const targetHeight = BH;
+    const targetCenterX = targetX + targetWidth / 2;
+    const targetCenterY = targetY + targetHeight / 2;
+
+    const arrowheadOffset = 8;
+    const topPoint = { x: centerX, y: blockY - arrowheadOffset, edge: 'top' };
+    const bottomPoint = { x: centerX, y: blockY + blockHeight + arrowheadOffset, edge: 'bottom' };
+    const leftPoint = { x: blockX - arrowheadOffset, y: centerY, edge: 'left' };
+    const rightPoint = { x: blockX + blockWidth + arrowheadOffset, y: centerY, edge: 'right' };
+
+    const distances = {
+      top: Math.hypot(topPoint.x - targetCenterX, topPoint.y - targetCenterY),
+      bottom: Math.hypot(bottomPoint.x - targetCenterX, bottomPoint.y - targetCenterY),
+      left: Math.hypot(leftPoint.x - targetCenterX, leftPoint.y - targetCenterY),
+      right: Math.hypot(rightPoint.x - targetCenterX, rightPoint.y - targetCenterY),
+    };
+
+    const closestEdge = Object.entries(distances).reduce((a, b) => a[1] < b[1] ? a : b)[0];
+    switch (closestEdge) {
+      case 'top': return topPoint;
+      case 'bottom': return bottomPoint;
+      case 'left': return leftPoint;
+      case 'right': return rightPoint;
+      default: return { x: centerX, y: centerY, edge: null };
+    }
+  };
+
+  const miniGetArrowheadOrientation = (edge) => {
+    switch (edge) {
+      case 'top': return 90;
+      case 'bottom': return 270;
+      case 'left': return 0;
+      case 'right': return 180;
+      default: return 0;
+    }
+  };
+
+  const miniExtendToArrowheadTip = (point, edge) => {
+    const tipExtension = 2;
+    switch (edge) {
+      case 'top': return { ...point, y: point.y + tipExtension };
+      case 'bottom': return { ...point, y: point.y - tipExtension };
+      case 'left': return { ...point, x: point.x + tipExtension };
+      case 'right': return { ...point, x: point.x - tipExtension };
+      default: return point;
+    }
+  };
+
+  // Currently executing node for this agent
+  const executingBlockId = tab?.agentId ? currentNodes?.[tab.agentId]?.currentNode : null;
+  const highlightColor = theme.isDark ? '#ffff00' : '#d97706';
+  const glowColor = theme.isDark ? '#facc15' : '#fde047';
+
+  return (
+    <div
+      className={`relative border ${theme.border.primary} rounded-lg ${theme.bg.canvas} overflow-hidden select-none`}
+      style={{
+        height: 220,
+        backgroundImage: theme.isDark
+          ? 'radial-gradient(circle, #404040 1px, transparent 1px)'
+          : 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        backgroundPosition: '0 0'
+      }}
+    >
+      {/* Agent id in top-right */}
+      <div className={`absolute top-2 right-2 text-xs font-semibold ${theme.text.secondary}`}>
+        {tab?.agentId || tab?.title || 'Untitled'}
+      </div>
+      <svg
+        className="w-full h-full"
+        viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ pointerEvents: 'none' }}
+      >
+        <defs>
+          <filter id="mini-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* Gray arrowheads (match main canvas) */}
+          <marker id="mini-arrowhead-0" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="0" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+          </marker>
+          <marker id="mini-arrowhead-90" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="90" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+          </marker>
+          <marker id="mini-arrowhead-180" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="180" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+          </marker>
+          <marker id="mini-arrowhead-270" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="270" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 12 6, 0 12" fill="#475569" />
+          </marker>
+        </defs>
+        {/* Connections behind (with edge-based points and arrowheads) */}
+        {connections.map((c) => {
+          const from = miniGetBlockConnectionPoint(c.from, c.to);
+          const to = miniGetBlockConnectionPoint(c.to, c.from);
+          const toExtended = miniExtendToArrowheadTip(to, to.edge);
+          const midX = (from.x + toExtended.x) / 2;
+          const midY = (from.y + toExtended.y) / 2;
+          const isVertical = to.edge === 'top' || to.edge === 'bottom';
+          const pathD = isVertical
+            ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
+            : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+          const arrowOrientation = miniGetArrowheadOrientation(to.edge);
+          const markerId = `mini-arrowhead-${arrowOrientation}`;
+          return (
+            <g key={c.id}>
+              <path d={pathD} stroke="#475569" strokeWidth="3" fill="none" markerEnd={`url(#${markerId})`} />
+              {/* We'll draw the red mid-circle after transitions to match layering */}
+            </g>
+          );
+        })}
+
+        {/* Animated transitions (flowing highlight) */}
+        {Array.isArray(animatingTransitions) &&
+          animatingTransitions.map((transition) => {
+            const from = miniGetBlockConnectionPoint(transition.fromBlockId, transition.toBlockId);
+            const to = miniGetBlockConnectionPoint(transition.toBlockId, transition.fromBlockId);
+            const toExtended = miniExtendToArrowheadTip(to, to.edge);
+            const midX = (from.x + toExtended.x) / 2;
+            const midY = (from.y + toExtended.y) / 2;
+            const isVertical = to.edge === 'top' || to.edge === 'bottom';
+            const arrowPathD = isVertical
+              ? `M ${from.x} ${from.y} Q ${from.x} ${midY} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`
+              : `M ${from.x} ${from.y} Q ${midX} ${from.y} ${midX} ${midY} T ${toExtended.x} ${toExtended.y}`;
+            // More accurate path length to avoid wrap-around artifacts on short paths
+            const midPoint = { x: midX, y: midY };
+            const control1 = isVertical ? { x: from.x, y: midY } : { x: midX, y: from.y };
+            const control2 = { x: 2 * midX - control1.x, y: 2 * midY - control1.y }; // reflection for 'T'
+            const approxQuadLen = (p0, p1, p2, steps = 24) => {
+              let len = 0;
+              let prev = p0;
+              for (let i = 1; i <= steps; i++) {
+                const t = i / steps;
+                const mt = 1 - t;
+                const x = mt * mt * p0.x + 2 * mt * t * p1.x + t * t * p2.x;
+                const y = mt * mt * p0.y + 2 * mt * t * p1.y + t * t * p2.y;
+                len += Math.hypot(x - prev.x, y - prev.y);
+                prev = { x, y };
+              }
+              return len;
+            };
+            const length1 = approxQuadLen({ x: from.x, y: from.y }, control1, midPoint);
+            const length2 = approxQuadLen(midPoint, control2, { x: toExtended.x, y: toExtended.y });
+            const estimatedLength = length1 + length2;
+            const flowKeyframe = `mini-flow-${transition.id}`;
+            const fadeKeyframe = `mini-fade-${transition.id}`;
+            const arrowheadFadeKeyframe = `mini-arrowhead-fade-${transition.id}`;
+            // Compute tangent angle at the end of the quadratic curve for precise orientation
+            const angleRad = Math.atan2(toExtended.y - control2.y, toExtended.x - control2.x);
+            const arrowOrientation = (angleRad * 180) / Math.PI;
+            const duration = '1.5s';
+            return (
+              <g key={`mini-${transition.id}`}>
+                <style>
+                  {`
+                    @keyframes ${flowKeyframe} {
+                      0% { stroke-dashoffset: ${estimatedLength}; }
+                      33% { stroke-dashoffset: 0; }
+                      66% { stroke-dashoffset: 0; }
+                      100% { stroke-dashoffset: -${estimatedLength}; }
+                    }
+                    @keyframes ${fadeKeyframe} {
+                      0% { opacity: 0; }
+                      5% { opacity: 1; }
+                      66% { opacity: 1; }
+                      100% { opacity: 1; }
+                    }
+                    @keyframes ${arrowheadFadeKeyframe} {
+                      0% { opacity: 0; }
+                      19% { opacity: 0; }
+                      29% { opacity: 1; }
+                      71% { opacity: 1; }
+                      81% { opacity: 0; }
+                      100% { opacity: 0; }
+                    }
+                  `}
+                </style>
+                <path
+                  d={arrowPathD}
+                  stroke="#ef4444"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeDasharray={`${estimatedLength} ${estimatedLength}`}
+                  style={{
+                    animation: `${flowKeyframe} ${duration} ease-out ${transition.delay}ms forwards, ${fadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
+                    strokeDashoffset: estimatedLength,
+                    opacity: 0
+                  }}
+                />
+                {/* Red arrowhead that fades in/out like main canvas */}
+                <polygon
+                  points="0 0, 12 6, 0 12"
+                  fill="#ef4444"
+                  transform={`translate(${toExtended.x}, ${toExtended.y}) rotate(${arrowOrientation}) translate(-10, -6)`}
+                  style={{
+                    animation: `${arrowheadFadeKeyframe} ${duration} ease-in-out ${transition.delay}ms forwards`,
+                    opacity: 0
+                  }}
+                />
+              </g>
+            );
+          })}
+
+        {/* Blocks */}
+        {blocks.map((b) => (
+          <g key={b.id}>
+            {/* Highlight glow if executing */}
+            {executingBlockId === b.id && (
+              <rect
+                x={b.x - 6}
+                y={b.y - 6}
+                width={BW + 12}
+                height={BH + 12}
+                rx="12"
+                ry="12"
+                fill="none"
+                stroke={highlightColor}
+                strokeWidth="3"
+                opacity="0.9"
+                filter="url(#mini-glow)"
+              />
+            )}
+            <rect x={b.x} y={b.y} width={BW} height={BH} rx="8" ry="8" fill={b.color || '#64748b'} stroke={executingBlockId === b.id ? highlightColor : 'rgba(0,0,0,0.2)'} strokeWidth="3" />
+            <text x={b.x + 10} y={b.y + 26} fontSize="12" fill="#ffffff" style={{ fontWeight: 600 }}>
+              {b.label}
+            </text>
+          </g>
+        ))}
+
+        {/* Red delete circles - render last (on top) */}
+        {connections.map((c) => {
+          const from = miniGetBlockConnectionPoint(c.from, c.to);
+          const to = miniGetBlockConnectionPoint(c.to, c.from);
+          const toExtended = miniExtendToArrowheadTip(to, to.edge);
+          const midX = (from.x + toExtended.x) / 2;
+          const midY = (from.y + toExtended.y) / 2;
+          return <circle key={`mini-circle-${c.id}`} cx={midX} cy={midY} r="10" fill="#ef4444" style={{ pointerEvents: 'none' }} />;
+        })}
+      </svg>
     </div>
   );
 }
