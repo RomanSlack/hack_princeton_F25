@@ -63,24 +63,24 @@ const INSTRUCTIONS = [
     content: 'Build an AI agent to play the battle royale game! Drag blocks from the sidebar to create your agent\'s behavior.',
   },
   {
-    title: 'Sense',
-    content: 'Use SENSE blocks to detect enemies, obstacles, and items in the game environment.',
+    title: 'Entry Points',
+    content: 'Start with Entry Point blocks like "On Start" or "On Attacked" to define when your agent should react. These trigger your agent\'s decision-making process.',
   },
   {
-    title: 'Plan',
-    content: 'PLAN blocks help your agent make strategic decisions based on what it senses.',
+    title: 'Agent Block',
+    content: 'Connect Entry Points to an Agent (LLM) block. Double-click the Agent block to configure the model, system prompt, and user prompt that guide its decision-making.',
   },
   {
-    title: 'Act',
-    content: 'ACT blocks execute actions like moving, shooting, and picking up items.',
+    title: 'Actions',
+    content: 'Connect your Agent block to Action blocks like Move, Attack, Collect, Plan, or Search Web. These define what your agent can do in the game.',
   },
   {
-    title: 'Reflect',
-    content: 'REFLECT blocks help your agent learn from successes and failures to improve over time.',
+    title: 'Connections',
+    content: 'Right-click blocks to enter connection mode, then click another block to connect them. Entry Points connect to Agents, and Agents connect to Actions.',
   },
   {
-    title: 'Run & Test',
-    content: 'Click the RUN button to deploy your agent into the game and watch it play!',
+    title: 'Deploy & Test',
+    content: 'Enter an Agent ID, then click "Deploy Agent" to send your agent into the game. Watch it play in the preview window!',
   },
 ];
 
