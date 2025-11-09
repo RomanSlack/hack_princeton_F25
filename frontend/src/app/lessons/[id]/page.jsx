@@ -997,6 +997,9 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
   const [chatHeight, setChatHeight] = useState(300); // Default height in pixels
   const [isResizing, setIsResizing] = useState(false);
   const [lessonProgress, setLessonProgress] = useState({}); // Track completion of each guideline
+  const [registeredAgents, setRegisteredAgents] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+  const [showAgentsPanel, setShowAgentsPanel] = useState(false);
   const chatEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -1819,6 +1822,81 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
     }
   };
 
+  // Fetch registered agents
+  const fetchAgents = async () => {
+    setLoadingAgents(true);
+    try {
+      const response = await fetch(`${BACKEND_URL}/list-agents`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch agents');
+      }
+      const data = await response.json();
+      setRegisteredAgents(data.agents || []);
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      toast.error('Failed to load agents list');
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  // Delete a specific agent
+  const handleDeleteAgent = async (agentIdToDelete) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/remove-agent/${agentIdToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to delete agent');
+      }
+
+      const result = await response.json();
+      toast.success(`Agent "${agentIdToDelete}" deleted!`);
+
+      // Refresh agents list
+      await fetchAgents();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(`Failed to delete agent: ${error.message}`);
+    }
+  };
+
+  // Delete all agents
+  const handleDeleteAllAgents = async () => {
+    if (registeredAgents.length === 0) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/cleanup-game-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agent_ids: null, // Delete all
+          stop_auto_stepping: false // Keep auto-stepping for future agents
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to delete all agents');
+      }
+
+      const result = await response.json();
+      toast.success(`Deleted ${result.removed_count} agent(s)!`);
+
+      // Refresh agents list
+      await fetchAgents();
+    } catch (error) {
+      console.error('Delete all error:', error);
+      toast.error(`Failed to delete agents: ${error.message}`);
+    }
+  };
+
   // Handle sending a message
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
@@ -2210,6 +2288,93 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
             <div className={`mt-2 text-xs ${theme.text.tertiary} text-center`}>
               <p className="font-semibold">Blocks: {blocks.length} | Connections: {connections.length}</p>
             </div>
+
+            {/* Manage Agents Button */}
+            <button
+              onClick={() => {
+                setShowAgentsPanel(!showAgentsPanel);
+                if (!showAgentsPanel) {
+                  fetchAgents();
+                }
+              }}
+              className={`w-full mt-2 ${theme.bg.hover} ${theme.text.secondary} font-semibold py-2 px-4 rounded-lg border ${theme.border.primary} hover:${theme.bg.secondary} transition-colors flex items-center justify-center gap-2`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <span className="text-xs">{showAgentsPanel ? 'HIDE AGENTS' : 'MANAGE AGENTS'}</span>
+            </button>
+
+            {/* Agents Panel */}
+            {showAgentsPanel && (
+              <div className={`mt-3 p-3 ${theme.bg.canvas} rounded-lg border ${theme.border.primary}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className={`text-xs font-bold ${theme.text.primary}`}>Registered Agents</h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={fetchAgents}
+                      disabled={loadingAgents}
+                      className={`text-xs ${theme.text.secondary} hover:${theme.text.primary} transition`}
+                      title="Refresh"
+                    >
+                      <svg className={`w-4 h-4 ${loadingAgents ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleDeleteAllAgents}
+                      disabled={registeredAgents.length === 0}
+                      className={`p-1 rounded transition ${
+                        registeredAgents.length === 0
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30'
+                      }`}
+                      title="Delete all agents"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {loadingAgents ? (
+                  <div className={`text-center text-xs ${theme.text.tertiary} py-4`}>Loading...</div>
+                ) : registeredAgents.length === 0 ? (
+                  <div className={`text-center text-xs ${theme.text.tertiary} py-4`}>No agents registered</div>
+                ) : (
+                  <div className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: 'calc(3 * 56px)' }}>
+                    {registeredAgents.map((agent) => (
+                      <div
+                        key={agent.agent_id}
+                        className={`flex items-center justify-between p-2 ${theme.bg.secondary} rounded border ${theme.border.primary}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs font-semibold ${theme.text.primary} truncate`}>
+                            {agent.agent_id}
+                          </div>
+                          <div className={`text-xs ${theme.text.tertiary}`}>
+                            {agent.block_count} blocks
+                            {agent.registered_in_game && (
+                              <span className="ml-2 text-green-600 dark:text-green-400">● Running</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteAgent(agent.agent_id)}
+                          className="ml-2 p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition flex-shrink-0"
+                          title="Delete agent"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
