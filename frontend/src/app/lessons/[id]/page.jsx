@@ -10,6 +10,13 @@ import { Book } from 'lucide-react';
 // Import lesson data from shared file
 import { LESSONS } from '../../../data/lessons';
 
+// Generate static params for all available lessons
+export function generateStaticParams() {
+  return LESSONS.map((lesson) => ({
+    id: lesson.id.toString(),
+  }));
+}
+
 // Lesson-specific builder configurations
 const LESSON_CONFIGS = {
   1: {
