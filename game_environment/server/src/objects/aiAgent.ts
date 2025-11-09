@@ -482,14 +482,14 @@ export class AIAgent extends GameObject {
                 }
             }
 
+            // Only update position if no collision
             if (!collision) {
-                // Safe to snap to final position
                 this.position = Vec.clone(this.moveTarget);
                 this.hitbox.position = this.position;
                 game.grid.updateObject(this);
             }
 
-            // Clear movement state regardless of collision (movement attempt complete)
+            // Clear movement state after handling position update
             this.moveTarget = null;
             this.moveStartPos = null;
         } else {
@@ -527,8 +527,7 @@ export class AIAgent extends GameObject {
                 this.hitbox.position = this.position;
                 game.grid.updateObject(this);
             } else {
-                // Collision detected during smooth movement - stop immediately
-                // Keep agent at current position and cancel remaining movement
+                // Collision detected during smooth movement - cancel movement without updating grid
                 this.moveTarget = null;
                 this.moveStartPos = null;
             }

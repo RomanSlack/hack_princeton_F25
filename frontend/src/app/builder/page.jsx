@@ -960,9 +960,28 @@ export default function AgentGameBuilder() {
       }
 
       const result = await response.json();
+      toast.success(`Agent "${result.agent_id}" deployed successfully!`);
 
-      // Auto-stepping should now start automatically, just confirm it's running
-      toast.success(`Agent "${result.agent_id}" deployed and running in the game!`);
+      // Always start auto-stepping when deploying an agent (idempotent - won't fail if already running)
+      try {
+        const autoStepResponse = await fetch(`${BACKEND_URL}/start-auto-stepping`, {
+          method: 'POST',
+        });
+        if (autoStepResponse.ok) {
+          const autoStepResult = await autoStepResponse.json();
+          if (autoStepResult.already_running) {
+            console.log('Auto-stepping already running');
+          } else {
+            console.log('Auto-stepping started');
+            toast.success('Agent is now running in the game!');
+          }
+        } else {
+          const autoStepError = await autoStepResponse.json();
+          console.warn('Failed to start auto-stepping:', autoStepError);
+        }
+      } catch (error) {
+        console.warn('Could not start auto-stepping:', error);
+      }
 
       // Save as a tab with consistency rules:
       // - If a tab with this agentId already exists, update that tab

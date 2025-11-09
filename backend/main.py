@@ -822,11 +822,14 @@ async def add_agent(request: AddAgentRequest):
                 logger.info("Game session activated by first agent registration")
 
             # Auto-start stepping if not already running and we have registered agents
+            logger.info(f"Auto-stepping check: auto_stepping={game_session.auto_stepping}, registered_agents={len(game_session.registered_agents)}")
             if not game_session.auto_stepping and len(game_session.registered_agents) > 0:
                 game_session.auto_stepping = True
                 game_session.step_delay = DEFAULT_STEP_DELAY
                 asyncio.create_task(auto_step_loop())
                 logger.info(f"Auto-stepping started automatically (delay: {DEFAULT_STEP_DELAY}s)")
+            else:
+                logger.info(f"Auto-stepping NOT started: auto_stepping={game_session.auto_stepping}, agents={len(game_session.registered_agents)}")
 
             zone_info = f" in {request.preferred_zone}" if request.preferred_zone else ""
             left_info = " (left side only)" if request.zone2_left_only and request.preferred_zone == "zone2" else ""
@@ -1295,10 +1298,10 @@ async def remove_agent(agent_id: str):
         game_removal_error = str(e)
         logger.error(f"Failed to remove agent {agent_id} from game environment: {e}")
 
-    # If no agents left, deactivate session but don't stop auto-stepping
-    # (it will naturally stop when no agents to process)
+    # If no agents left, deactivate session and stop auto-stepping
     if len(game_session.registered_agents) == 0:
         game_session.active = False
+        game_session.auto_stepping = False
         logger.info("No agents remaining, game session deactivated")
 
     return {

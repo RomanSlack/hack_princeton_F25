@@ -1778,27 +1778,25 @@ function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
       const result = await response.json();
       toast.success(`Agent "${result.agent_id}" deployed successfully! Current node: ${result.current_node}`);
 
-      // For lesson 1, start auto-stepping if not already running
-      if (lessonId === 1) {
-        try {
-          const autoStepResponse = await fetch(`${BACKEND_URL}/start-auto-stepping`, {
-            method: 'POST',
-          });
-          if (autoStepResponse.ok) {
+      // Always start auto-stepping when deploying an agent (idempotent - won't fail if already running)
+      try {
+        const autoStepResponse = await fetch(`${BACKEND_URL}/start-auto-stepping`, {
+          method: 'POST',
+        });
+        if (autoStepResponse.ok) {
+          const autoStepResult = await autoStepResponse.json();
+          if (autoStepResult.already_running) {
+            console.log('Auto-stepping already running');
+          } else {
             console.log('Auto-stepping started');
             toast.success('Agent is now running in the game!');
-          } else {
-            const autoStepError = await autoStepResponse.json();
-            // It's OK if auto-stepping is already running
-            if (autoStepError.detail?.includes('already running')) {
-              console.log('Auto-stepping already running');
-            } else {
-              console.warn('Failed to start auto-stepping:', autoStepError);
-            }
           }
-        } catch (error) {
-          console.warn('Could not start auto-stepping:', error);
+        } else {
+          const autoStepError = await autoStepResponse.json();
+          console.warn('Failed to start auto-stepping:', autoStepError);
         }
+      } catch (error) {
+        console.warn('Could not start auto-stepping:', error);
       }
 
       // Mark deploy task as complete
