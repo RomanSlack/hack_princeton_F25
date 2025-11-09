@@ -163,10 +163,57 @@ export class AgentBridge {
         }
 
         if (targetPosition) {
+            // Calculate distance to target
+            const distance = Geometry.distance(agent.position, targetPosition);
+
+            // Get current weapon and ammo
+            const activeWeapon = agent.weapons[agent.activeWeaponIndex];
+            const hasAmmo = activeWeapon && activeWeapon.ammo > 0;
+
+            // Auto-switch to fists if:
+            // 1. Out of ammo with current weapon
+            // 2. Very close to target (melee range < 15 units)
+            const shouldUseFists = !hasAmmo || distance < 15;
+
+            if (shouldUseFists && agent.activeWeaponIndex !== 0) {
+                // Switch to fists (slot 0)
+                input.actions.switchWeapon = true;
+                console.log(`[AgentBridge] Agent ${agent.username} auto-switching to fists (distance: ${distance.toFixed(1)}, hasAmmo: ${hasAmmo})`);
+            }
+
+            // Check for attack deadlock (same target for too long without progress)
+            if (state.lastTargetId === targetId) {
+                state.sameTargetCount = (state.sameTargetCount || 0) + 1;
+            } else {
+                state.lastTargetId = targetId;
+                state.sameTargetCount = 1;
+            }
+
+            // If stuck attacking same target for 8+ consecutive actions, move closer instead
+            if (state.sameTargetCount > 8) {
+                console.log(`[AgentBridge] Agent ${agent.username} stuck attacking ${targetId}, forcing movement closer`);
+
+                // Calculate direction towards target
+                const direction = Vec.sub(targetPosition, agent.position);
+                const moveDistance = Math.min(20, distance - 10); // Move closer but not too close
+                const normalizedDirection = Vec.normalize(direction);
+                const offset = Vec.scale(normalizedDirection, moveDistance);
+
+                // Apply move towards target instead of attacking
+                this.applyMoveCommand(input, {
+                    tool_type: 'move',
+                    parameters: { x: offset.x, y: offset.y }
+                }, agent, state);
+
+                // Reset counter after forcing movement
+                state.sameTargetCount = 0;
+                return;
+            }
+
             // Aim at target and attack
             input.mouse = targetPosition;
             input.attacking = true;
-            console.log(`[AgentBridge] Agent ${agent.username} attacking ${targetId}`);
+            console.log(`[AgentBridge] Agent ${agent.username} attacking ${targetId} (weapon: ${activeWeapon?.definition.idString || 'none'}, ammo: ${activeWeapon?.ammo || 0})`);
         } else {
             console.warn(`[AgentBridge] Target not found: ${targetId}`);
             input.attacking = false;
@@ -331,4 +378,6 @@ interface CommandState {
     moveTarget: Vector | null;
     attackTarget: string | null;
     currentPlan: string | null;
+    lastTargetId?: string; // Track which target we're attacking
+    sameTargetCount?: number; // Counter for deadlock detection
 }
