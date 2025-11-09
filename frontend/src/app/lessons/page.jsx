@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import NeetCodeRoadmap from '../../components/NeetCodeRoadmap';
 import ComponentDetailSidebar from '../../components/ComponentDetailSidebar';
+import StarredLessonsSidebar from '../../components/StarredLessonsSidebar';
 import { LESSONS } from '../../data/lessons';
 
 // Component definitions - Group lessons into roadmap components
@@ -67,11 +68,22 @@ const getInitialProgress = () => {
   return {};
 };
 
+// Starred lessons tracking
+const getInitialStarredLessons = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('starredLessons');
+    return saved ? JSON.parse(saved) : [];
+  }
+  return [];
+};
+
 export default function LessonsPage() {
   const theme = useTheme();
   const [progress, setProgress] = useState(getInitialProgress);
+  const [starredLessons, setStarredLessons] = useState(getInitialStarredLessons);
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isStarredSidebarOpen, setIsStarredSidebarOpen] = useState(false);
 
   // Save progress to localStorage
   const updateProgress = (lessonId, status) => {
@@ -82,16 +94,40 @@ export default function LessonsPage() {
     }
   };
 
+  // Toggle star for a lesson
+  const toggleStar = (lessonId) => {
+    const newStarred = starredLessons.includes(lessonId)
+      ? starredLessons.filter(id => id !== lessonId)
+      : [...starredLessons, lessonId];
+    setStarredLessons(newStarred);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('starredLessons', JSON.stringify(newStarred));
+    }
+  };
+
   // Open sidebar with selected component
   const handleComponentSelect = (component) => {
     setSelectedComponent(component);
     setIsSidebarOpen(true);
+    setIsStarredSidebarOpen(false); // Close starred sidebar if open
   };
 
   // Smoothly close sidebar, then clear content after transition
   const handleCloseSidebar = () => {
     setIsSidebarOpen(false);
     setTimeout(() => setSelectedComponent(null), 300); // match CSS duration
+  };
+
+  // Open starred sidebar
+  const handleStarredClick = () => {
+    setIsStarredSidebarOpen(true);
+    setIsSidebarOpen(false); // Close component sidebar if open
+    setSelectedComponent(null);
+  };
+
+  // Close starred sidebar
+  const handleCloseStarredSidebar = () => {
+    setIsStarredSidebarOpen(false);
   };
 
   return (
@@ -104,30 +140,45 @@ export default function LessonsPage() {
             lessons={LESSONS}
             progress={progress}
             onComponentSelect={handleComponentSelect}
+            onStarredClick={handleStarredClick}
+            starredCount={starredLessons.length}
           />
         </div>
       </div>
 
-      {/* Right Sidebar - Side-by-side with roadmap */}
+      {/* Right Sidebar - Component or Starred Lessons */}
       <div
         className="h-screen transition-[width] duration-300 ease-out overflow-hidden"
-        style={{ width: isSidebarOpen ? '600px' : '0px' }}
+        style={{ width: (isSidebarOpen || isStarredSidebarOpen) ? '600px' : '0px' }}
       >
         <div
           className="h-full"
           style={{
-            transform: isSidebarOpen ? 'translateX(0)' : 'translateX(100%)',
+            transform: (isSidebarOpen || isStarredSidebarOpen) ? 'translateX(0)' : 'translateX(100%)',
             transition: 'transform 300ms ease-out',
             width: '600px',
           }}
         >
-          <ComponentDetailSidebar
-            component={selectedComponent}
-            lessons={LESSONS}
-            progress={progress}
-            onProgressUpdate={updateProgress}
-            onClose={handleCloseSidebar}
-          />
+          {isStarredSidebarOpen ? (
+            <StarredLessonsSidebar
+              starredLessons={starredLessons}
+              lessons={LESSONS}
+              progress={progress}
+              onProgressUpdate={updateProgress}
+              onStarToggle={toggleStar}
+              onClose={handleCloseStarredSidebar}
+            />
+          ) : (
+            <ComponentDetailSidebar
+              component={selectedComponent}
+              lessons={LESSONS}
+              progress={progress}
+              onProgressUpdate={updateProgress}
+              onClose={handleCloseSidebar}
+              starredLessons={starredLessons}
+              onStarToggle={toggleStar}
+            />
+          )}
         </div>
       </div>
     </div>

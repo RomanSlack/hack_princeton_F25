@@ -21,6 +21,7 @@ const LESSON_CONFIGS = {
     showAgentBlock: true,
     showToolBlock: true,
     showConnections: true,
+    lessonBlurb: 'Agentic AI refers to AI systems that can accomplish goals with limited supervision. Unlike traditional AI that responds to prompts, agentic AI can autonomously plan, execute actions, and adapt to achieve objectives. These agents can perceive their environment, reason about situations, make decisions, and take actions—all while learning and improving over time.',
     lessonGuidelines: [
       { text: 'Enter an Agent ID in the sidebar (e.g., "my_agent") - this gives your agent a name' },
       { text: 'Drag an', block: 'onStart', textAfter: 'block onto the canvas - this is where your agent begins' },
@@ -29,31 +30,739 @@ const LESSON_CONFIGS = {
       { text: 'Click "Deploy Agent" to test your agent in the game preview' },
     ],
   },
+  2: {
+    // Perception - understanding environment awareness
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart', 'onAttacked'],
+    allowedToolBlocks: ['move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Perception is how agents gather information from their environment. In agentic AI, perception involves collecting data through sensors, APIs, databases, and user interactions. This environmental awareness forms the foundation for all decision-making. Agents must accurately perceive their surroundings to make informed choices and respond appropriately to changing conditions.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID to identify your agent' },
+      { text: 'Drag an', block: 'onStart', textAfter: 'block onto the canvas - this represents your agent perceiving the game start' },
+      { text: 'Connect it to an', block: 'agent', textAfter: 'block - this processes the perception' },
+      { text: 'Connect your agent to a', block: 'move', textAfter: 'block - this shows how perception leads to action' },
+      { text: 'Add an', block: 'onAttacked', textAfter: 'block connected to your agent to show different perceptions' },
+      { text: 'Click "Deploy Agent" to see how perception triggers work in the game' },
+    ],
+  },
   3: {
     // Simple Reflex Agents - only action blocks
     showBuilder: true,
-    allowedBlocks: ['action'],
-    showAgentBlock: false,
-    showToolBlock: false,
-    showConnections: false,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart', 'onAttacked'],
+    allowedToolBlocks: ['move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Simple reflex agents are the most basic form of agentic AI. They respond directly to current percepts without maintaining internal state or memory. These agents use condition-action rules: if a certain condition is detected, they immediately execute a corresponding action. While limited, simple reflex agents are fast and effective for straightforward tasks where immediate responses are needed.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your reflex agent' },
+      { text: 'Place an', block: 'onStart', textAfter: 'block - this is your agent\'s reflex trigger' },
+      { text: 'Connect it to an', block: 'agent', textAfter: 'block - this processes the reflex condition' },
+      { text: 'Connect your agent to a', block: 'move', textAfter: 'block - this is the immediate reflex action' },
+      { text: 'Add an', block: 'onAttacked', textAfter: 'block connected to your agent to show another reflex condition' },
+      { text: 'Deploy your agent to see simple reflex behavior in action' },
+    ],
+  },
+  4: {
+    // Reasoning - logical processing
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart', 'onAttacked'],
+    allowedToolBlocks: ['move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Reasoning is how agents process information to extract meaningful insights and make sense of their environment. Agents use natural language processing, pattern detection, and context understanding to interpret queries, analyze situations, and determine appropriate actions. Effective reasoning allows agents to go beyond simple pattern matching and make intelligent decisions based on complex information.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your reasoning agent' },
+      { text: 'Drag an', block: 'onStart', textAfter: 'block onto the canvas' },
+      { text: 'Connect it to an', block: 'agent', textAfter: 'block - this is where your agent reasons about the game state' },
+      { text: 'Connect your agent to a', block: 'move', textAfter: 'block - this executes the reasoned decision' },
+      { text: 'Double-click the agent block to configure its reasoning prompts' },
+      { text: 'Configure your agent with a system prompt that helps it reason about game situations' },
+      { text: 'Deploy your agent to see reasoning in action' },
+    ],
+  },
+  5: {
+    // Planning - task decomposition
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan', 'move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Planning enables agents to break down complex goals into actionable steps. Agents develop strategies using decision trees, planning algorithms, and decomposition techniques to create execution plans. Effective planning allows agents to tackle multi-step problems by organizing actions in logical sequences, considering dependencies, and adapting when obstacles arise.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your planning agent' },
+      { text: 'Place an', block: 'onStart', textAfter: 'block and connect it to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to a', block: 'plan', textAfter: 'block - this represents strategic planning' },
+      { text: 'Connect the plan block to a', block: 'move', textAfter: 'block - this executes the planned action' },
+      { text: 'Configure your agent\'s prompts to emphasize planning and strategy' },
+      { text: 'Deploy to see how planning improves agent decision-making' },
+    ],
+  },
+  6: {
+    // Goal Setting & Decision-Making
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['move', 'collect', 'attack'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Goal setting and decision-making involve agents evaluating multiple possible actions and selecting optimal courses based on efficiency, accuracy, and predicted outcomes. Agents use probabilistic models, utility functions, and optimization techniques to weigh trade-offs and choose actions that best achieve their objectives. This process balances immediate rewards with long-term goals.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your decision-making agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to multiple tool blocks:', block: 'move', textAfter: ',', block: 'collect', textAfter: ', and', block: 'attack' },
+      { text: 'Configure your agent with prompts that help it evaluate which action best achieves its goals' },
+      { text: 'Deploy and observe how your agent chooses between different actions' },
+    ],
   },
   7: {
     // Prompt Engineering - agent blocks with prompt editing
     showBuilder: true,
-    allowedBlocks: ['agent'],
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['move'],
     showAgentBlock: true,
-    showToolBlock: false,
-    showConnections: false,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Prompt engineering is the art and science of crafting effective prompts that guide agent behavior and reasoning. The structure, phrasing, and content of prompts significantly impact how agents interpret tasks, reason through problems, and generate responses. Masterful prompt engineering involves understanding how different prompt styles produce different outcomes and iteratively refining prompts to achieve desired results.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your prompt engineering experiment' },
+      { text: 'Drag an', block: 'onStart', textAfter: 'block onto the canvas' },
+      { text: 'Connect it to an', block: 'agent', textAfter: 'block - this is where you\'ll test different prompts' },
+      { text: 'Connect your agent to a', block: 'move', textAfter: 'block to see how prompts affect actions' },
+      { text: 'Double-click the agent block to open the configuration modal' },
+      { text: 'Configure your agent with a system prompt (try descriptive, instructional, or role-based)' },
+      { text: 'Configure your agent with a user prompt to see how phrasing affects reasoning' },
+      { text: 'Deploy and test different prompt styles to observe how they change agent behavior' },
+    ],
+  },
+  8: {
+    // Memory & Reflection
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart', 'onAttacked'],
+    allowedToolBlocks: ['move', 'plan'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Memory and reflection enable agents to maintain context across interactions and learn from past experiences. Agents store information about previous actions, outcomes, and environmental states, allowing them to make better decisions over time. Reflection involves agents analyzing their past performance, identifying patterns, and adjusting strategies based on what worked or didn\'t work previously.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your memory-enabled agent' },
+      { text: 'Set up both', block: 'onStart', textAfter: 'and', block: 'onAttacked', textAfter: 'action blocks' },
+      { text: 'Connect both to an', block: 'agent', textAfter: 'block - this agent will remember different situations' },
+      { text: 'Add a', block: 'plan', textAfter: 'block connected to your agent to show strategic memory' },
+      { text: 'Configure your agent\'s prompts to reference past experiences and learned patterns' },
+      { text: 'Deploy to see how memory improves agent performance over time' },
+    ],
+  },
+  9: {
+    // Learning & Adaptation
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart', 'onAttacked'],
+    allowedToolBlocks: ['move', 'attack', 'collect'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Learning and adaptation allow agents to improve through feedback and experience. Agents use reinforcement learning, self-supervised learning, and feedback loops to evaluate outcomes, identify successful strategies, and refine their behavior. This continuous improvement process enables agents to become more effective over time, adapting to new situations and optimizing their performance.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your learning agent' },
+      { text: 'Create a multi-path agent with', block: 'onStart', textAfter: 'and', block: 'onAttacked', textAfter: 'blocks' },
+      { text: 'Connect both to an', block: 'agent', textAfter: 'block that learns from experience' },
+      { text: 'Add multiple tool blocks (', block: 'move', textAfter: ',', block: 'attack', textAfter: ',', block: 'collect', textAfter: ') to give your agent options' },
+      { text: 'Configure prompts that encourage your agent to learn from successes and failures' },
+      { text: 'Deploy and observe how your agent adapts its strategy over multiple game runs' },
+    ],
+  },
+  10: {
+    // Communication
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan', 'move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Communication enables agents to exchange information, coordinate actions, and interact effectively with users and other agents. Agents use natural language interfaces, structured message protocols, and communication frameworks to share knowledge, request assistance, provide updates, and collaborate on tasks. Effective communication is essential for multi-agent systems and human-AI collaboration.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your communicative agent' },
+      { text: 'Set up an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Add a', block: 'plan', textAfter: 'block to show how agents communicate their intentions' },
+      { text: 'Connect to a', block: 'move', textAfter: 'block to execute communicated plans' },
+      { text: 'Configure your agent\'s prompts to emphasize clear communication and coordination' },
+      { text: 'Deploy to see how communication improves agent coordination' },
+    ],
   },
   11: {
     // Tool Calling - agent + tool blocks
     showBuilder: true,
-    allowedBlocks: ['agent', 'tool'],
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null, // All tools allowed
     showAgentBlock: true,
     showToolBlock: true,
     showConnections: true,
+    lessonBlurb: 'Tool calling allows agents to extend their capabilities beyond language model limitations by interacting with external systems. Agents can call APIs, search the web, query databases, manipulate files, and use specialized tools to accomplish tasks they couldn\'t handle with language alone. This integration transforms agents from conversational interfaces into powerful autonomous systems capable of real-world action.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your tool-calling agent' },
+      { text: 'Place an', block: 'onStart', textAfter: 'block on the canvas' },
+      { text: 'Connect it to an', block: 'agent', textAfter: 'block - this agent will call tools' },
+      { text: 'Connect your agent to multiple tool blocks:', block: 'move', textAfter: ',', block: 'attack', textAfter: ',', block: 'collect', textAfter: ', and', block: 'plan' },
+      { text: 'Configure your agent with prompts that help it intelligently choose which tools to use' },
+      { text: 'Deploy to see your agent calling different tools based on the situation' },
+    ],
   },
-  // Add more lesson configs as needed
+  12: {
+    // Execution & Action
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart', 'onAttacked'],
+    allowedToolBlocks: null, // All tools
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Execution and action involve agents translating decisions into concrete actions in real environments. Agents interact with external systems, APIs, databases, and physical devices to accomplish goals. Effective execution requires agents to handle errors, manage state transitions, verify action completion, and adapt when actions don\'t produce expected results.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your action-executing agent' },
+      { text: 'Create action triggers with', block: 'onStart', textAfter: 'and', block: 'onAttacked', textAfter: 'blocks' },
+      { text: 'Connect both to an', block: 'agent', textAfter: 'block that decides on actions' },
+      { text: 'Connect your agent to multiple tool blocks to execute different actions' },
+      { text: 'Configure your agent to verify action execution and handle failures' },
+      { text: 'Deploy to see your agent executing actions in the game environment' },
+    ],
+  },
+  13: {
+    // Agent Orchestration
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Agent orchestration involves coordinating multiple agents in complex workflows. Orchestration systems manage agent lifecycles, track progress, coordinate data flow, handle failures, and ensure tasks are completed efficiently. Effective orchestration enables building sophisticated multi-agent systems where agents work together to accomplish complex objectives that no single agent could handle alone.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your orchestrated agent system' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block representing the orchestration entry point' },
+      { text: 'Connect it to multiple', block: 'agent', textAfter: 'blocks - each agent handles a different task' },
+      { text: 'Connect agents to appropriate tool blocks to show coordinated workflows' },
+      { text: 'Create connections between agents and tools to enable sequential or parallel workflows' },
+      { text: 'Deploy to see orchestrated multi-agent behavior' },
+    ],
+  },
+  14: {
+    // Multi-Agent Systems
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Multi-agent systems involve multiple agents working together, either in hierarchical structures with conductor models or in decentralized networks where agents collaborate as equals. These systems enable emergent behaviors, distributed problem-solving, and complex task completion through agent collaboration. Multi-agent systems can solve problems that require diverse expertise, parallel processing, or distributed coordination.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your multi-agent system' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to trigger your multi-agent system' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks representing different specialized agents' },
+      { text: 'Connect agents to different tool blocks to show specialization' },
+      { text: 'Create connections between agents to allow coordination' },
+      { text: 'Configure each agent with prompts that enable collaboration' },
+      { text: 'Deploy to observe how multiple agents work together' },
+    ],
+  },
+  15: {
+    // ReAct (Reasoning + Acting)
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'ReAct (Reasoning + Acting) is a pattern that combines reasoning and acting in iterative loops. Agents alternate between thinking through problems step-by-step and taking actions, allowing them to adapt their strategy based on what they observe. This iterative approach enables agents to handle complex, dynamic problems by continuously reasoning about the current state and adjusting their actions accordingly.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your ReAct agent' },
+      { text: 'Set up an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Create a loop: connect your agent to tool blocks, then back to the agent' },
+      { text: 'Add', block: 'plan', textAfter: 'and', block: 'move', textAfter: 'blocks and connect them to show reasoning and acting cycles' },
+      { text: 'Configure your agent with prompts that enable reasoning, acting, observing, and repeating' },
+      { text: 'Deploy to see the ReAct pattern in action' },
+    ],
+  },
+  16: {
+    // ReWOO (Reasoning Without Observation)
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan', 'move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'ReWOO (Reasoning Without Observation) separates planning from execution to create more efficient agent systems. Agents first create a complete plan through reasoning, then execute the plan without continuous observation. This approach reduces computational overhead and enables more scalable systems by batching reasoning and execution phases.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your ReWOO agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to a', block: 'plan', textAfter: 'block first - this is the reasoning phase' },
+      { text: 'Then connect plan to', block: 'move', textAfter: 'blocks - this is the execution phase' },
+      { text: 'Configure your agent to plan completely before executing' },
+      { text: 'Deploy to see efficient ReWOO pattern execution' },
+    ],
+  },
+  17: {
+    // Multi-Agent Collaboration
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Multi-agent collaboration focuses on emergent behaviors that arise when agents work together. Through shared protocols, coordination mechanisms, and collaborative strategies, multiple agents can solve complex problems that individual agents cannot. These systems demonstrate how simple agent behaviors can combine to create sophisticated collective intelligence.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your collaborative agent team' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to trigger your collaborative system' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks representing different team members' },
+      { text: 'Connect agents to complementary tool blocks (e.g., one handles', block: 'plan', textAfter: ', another handles', block: 'attack', textAfter: ')' },
+      { text: 'Create connections between agents to allow information sharing and coordination' },
+      { text: 'Configure each agent with prompts that encourage collaboration' },
+      { text: 'Deploy to observe emergent collaborative behaviors' },
+    ],
+  },
+  18: {
+    // Agent Communication Protocol (ACP)
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Agent Communication Protocol (ACP) provides standardized communication formats that enable different agents and systems to interoperate effectively. ACP ensures agents can exchange information reliably, regardless of their underlying implementation. This standardization is crucial for building large-scale, heterogeneous multi-agent systems where agents from different sources must work together.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your ACP-compliant agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate ACP communication' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks that will communicate using ACP' },
+      { text: 'Connect agents through tool blocks that represent communication channels' },
+      { text: 'Use', block: 'plan', textAfter: 'blocks to show structured message planning' },
+      { text: 'Configure agents with prompts that follow ACP message formats' },
+      { text: 'Deploy to see standardized agent communication in action' },
+    ],
+  },
+  19: {
+    // Agent2Agent (A2A)
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Agent2Agent (A2A) protocol enables direct communication between agents through chat-like interfaces. A2A allows agents to have conversations, exchange information, negotiate, and coordinate actions in real-time. This protocol facilitates natural agent-to-agent interactions, enabling agents to work together more effectively through structured dialogue.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your A2A-enabled agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate A2A communication' },
+      { text: 'Create two or more', block: 'agent', textAfter: 'blocks representing agents that will chat' },
+      { text: 'Connect agents in a way that shows message passing between them' },
+      { text: 'Use', block: 'plan', textAfter: 'blocks to represent message composition' },
+      { text: 'Configure agents with prompts that enable natural A2A conversations' },
+      { text: 'Deploy to see agents communicating directly with each other' },
+    ],
+  },
+  20: {
+    // Model Context Protocol (MCP)
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Model Context Protocol (MCP) enables sharing context and information between agents and systems. MCP servers provide structured access to resources, tools, and knowledge bases, allowing agents to access rich contextual information. This protocol enhances agent capabilities by providing standardized ways to share and access contextual data.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your MCP-enabled agent' },
+      { text: 'Set up an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks that represent context retrieval' },
+      { text: 'Create connections that show how agents access shared context' },
+      { text: 'Configure your agent with prompts that use MCP for context sharing' },
+      { text: 'Deploy to see context-aware agent behavior' },
+    ],
+  },
+  21: {
+    // LangChain
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'LangChain is a popular framework for building agentic applications with LLMs. It provides abstractions for chains, agents, memory management, and tool integration. LangChain simplifies the process of building complex agent workflows by providing reusable components and patterns that handle common agentic AI tasks.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your LangChain-style agent' },
+      { text: 'Create a chain:', block: 'onStart', textAfter: '→', block: 'agent', textAfter: '→ tool blocks' },
+      { text: 'Build multiple connected agents to show LangChain\'s chain capabilities' },
+      { text: 'Use various tool blocks to demonstrate tool integration' },
+      { text: 'Configure agents with prompts that follow LangChain patterns' },
+      { text: 'Deploy to see LangChain-style agent workflows' },
+    ],
+  },
+  22: {
+    // LangGraph
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'LangGraph enables building stateful agent workflows with cycles, conditional logic, and human-in-the-loop interactions. It models agent systems as state machines, allowing complex control flow, loops, and state management. LangGraph is ideal for building agents that need to maintain state across multiple interactions and handle complex decision trees.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your LangGraph agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate your stateful workflow' },
+      { text: 'Create a stateful workflow with multiple', block: 'agent', textAfter: 'blocks' },
+      { text: 'Create cycles: connect agents back to previous agents to show stateful loops' },
+      { text: 'Add tool blocks and connect them to show state-based decisions' },
+      { text: 'Configure agents with prompts that maintain and update state' },
+      { text: 'Deploy to see stateful LangGraph-style workflows' },
+    ],
+  },
+  23: {
+    // AutoGen
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'AutoGen enables multi-agent conversations where agents can autonomously collaborate through dialogue. Agents in AutoGen systems can have extended conversations, debate solutions, ask clarifying questions, and reach consensus. This framework is powerful for complex problem-solving where multiple perspectives and iterative refinement are valuable.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your AutoGen agent system' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate the conversation' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks representing conversational agents' },
+      { text: 'Connect agents in a way that shows conversation flow' },
+      { text: 'Use', block: 'plan', textAfter: 'blocks to represent conversation topics' },
+      { text: 'Configure agents with prompts that enable natural multi-agent conversations' },
+      { text: 'Deploy to see AutoGen-style agent conversations' },
+    ],
+  },
+  24: {
+    // crewAI
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'crewAI organizes agents into specialized teams with specific roles, enabling complex workflows where agents collaborate on tasks. Each agent has a defined role and expertise, and crews coordinate their work to accomplish objectives. This framework is ideal for scenarios requiring diverse expertise, like retail optimization, call analysis, or content creation.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your crewAI team' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate your crew workflow' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks, each representing a specialized role' },
+      { text: 'Connect each agent to role-appropriate tool blocks' },
+      { text: 'Create connections between agents and tools to show crew coordination' },
+      { text: 'Configure each agent with prompts that define their specific role' },
+      { text: 'Deploy to see role-based crewAI team collaboration' },
+    ],
+  },
+  25: {
+    // MetaGPT
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'MetaGPT enables automated software development through coordinated agent teams. Agents take on different roles in the software development lifecycle, from product managers who create PRDs to engineers who write code. This framework demonstrates how agentic AI can automate complex, multi-step creative and technical processes.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your MetaGPT development team' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate the development workflow' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks representing different development roles' },
+      { text: 'Connect agents in a sequence showing the development workflow' },
+      { text: 'Use', block: 'plan', textAfter: 'blocks to represent PRD creation and planning' },
+      { text: 'Configure agents with prompts that match software development roles' },
+      { text: 'Deploy to see MetaGPT-style development automation' },
+    ],
+  },
+  26: {
+    // ChatDev
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'ChatDev uses ChatChain to organize agents into collaborative development teams. Agents engage in structured conversations to plan, design, code, and test software. This framework emphasizes iterative collaboration, with agents discussing and refining their work through dialogue, resulting in higher-quality outputs.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your ChatDev team' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block to initiate the ChatDev workflow' },
+      { text: 'Create multiple', block: 'agent', textAfter: 'blocks for your development team' },
+      { text: 'Create ChatChain connections showing conversation flow between agents' },
+      { text: 'Add', block: 'plan', textAfter: 'blocks and connect them to represent collaborative planning' },
+      { text: 'Configure agents with prompts that enable structured development conversations' },
+      { text: 'Deploy to see ChatDev-style collaborative development' },
+    ],
+  },
+  27: {
+    // Agentic RAG
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Agentic RAG combines retrieval-augmented generation with agentic capabilities, enabling agents to actively search, retrieve, and use information from knowledge bases. Unlike traditional RAG, agentic RAG allows agents to decide what information to retrieve, when to retrieve it, and how to use it, making information access more intelligent and context-aware.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your agentic RAG system' },
+      { text: 'Set up an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing retrieval planning' },
+      { text: 'Create connections that show how agents decide what information to retrieve' },
+      { text: 'Configure your agent with prompts that intelligently use retrieved information' },
+      { text: 'Deploy to see agentic RAG in action' },
+    ],
+  },
+  28: {
+    // Agentic Chunking
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Agentic chunking uses agents to intelligently break down documents based on semantic meaning rather than fixed sizes. Agents analyze document structure, identify logical boundaries, and create chunks that preserve context and meaning. This approach improves RAG performance by ensuring retrieved chunks are semantically coherent and contextually relevant.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your agentic chunking system' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing chunking strategies' },
+      { text: 'Create connections that show semantic-based chunking decisions' },
+      { text: 'Configure your agent with prompts that help it understand document structure and meaning' },
+      { text: 'Deploy to see intelligent document chunking' },
+    ],
+  },
+  29: {
+    // Corrective RAG
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Corrective RAG enables agents to identify when retrieval fails and automatically correct queries or search strategies. Agents evaluate retrieval results, detect when information is missing or incorrect, and refine their retrieval approach. This self-correcting capability significantly improves RAG reliability and accuracy.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your corrective RAG agent' },
+      { text: 'Set up an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Create a feedback loop: agent →', block: 'plan', textAfter: '→ back to agent' },
+      { text: 'Create connections that show error detection and correction' },
+      { text: 'Configure your agent with prompts that evaluate and improve retrieval strategies' },
+      { text: 'Deploy to see self-correcting RAG behavior' },
+    ],
+  },
+  30: {
+    // Human-in-the-Loop
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Human-in-the-Loop systems integrate human oversight into agent workflows, ensuring safety and quality in critical decisions. Agents can request human approval, incorporate human feedback, and escalate complex decisions. This hybrid approach combines AI autonomy with human judgment, enabling trustworthy agentic systems for high-stakes applications.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your human-in-the-loop agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block that makes decisions' },
+      { text: 'Connect your agent to tool blocks to show actions that may need human approval' },
+      { text: 'Use', block: 'plan', textAfter: 'blocks to represent approval workflows' },
+      { text: 'Configure your agent to request human oversight for critical actions' },
+      { text: 'Deploy to see human-AI collaboration in action' },
+    ],
+  },
+  31: {
+    // AI Agent Evaluation
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'AI Agent Evaluation involves systematically testing and measuring agent performance using accuracy metrics, reliability tests, and benchmarking frameworks. Effective evaluation helps identify agent strengths and weaknesses, guides improvements, and ensures agents meet quality standards. Evaluation is crucial for deploying trustworthy agentic systems.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your evaluable agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to multiple tool blocks to show diverse agent capabilities' },
+      { text: 'Add multiple tool blocks and connections to create a testable system' },
+      { text: 'Configure your agent with prompts that include clear success criteria' },
+      { text: 'Deploy and evaluate your agent\'s performance across different scenarios' },
+    ],
+  },
+  32: {
+    // AI Agent Security
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'AI Agent Security involves protecting agentic systems from malicious use, unauthorized access, and adversarial attacks. Security measures include access controls, input validation, output filtering, threat detection, and secure communication protocols. Robust security is essential for deploying agentic AI in production environments.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your secure agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block with security considerations' },
+      { text: 'Connect your agent to tool blocks to show secure actions' },
+      { text: 'Use', block: 'plan', textAfter: 'blocks to represent security checks' },
+      { text: 'Configure your agent with prompts that emphasize secure behavior' },
+      { text: 'Deploy to see security-conscious agent behavior' },
+    ],
+  },
+  33: {
+    // AI Agent Ethics
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'AI Agent Ethics focuses on designing agentic systems that are fair, transparent, unbiased, and aligned with human values. Ethical agents consider the impact of their actions, mitigate bias, ensure fairness, and operate transparently. Building ethical agents is crucial for responsible AI deployment and maintaining public trust.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your ethical agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to tool blocks to show ethical actions' },
+      { text: 'Add', block: 'plan', textAfter: 'blocks and connect them to represent ethical considerations' },
+      { text: 'Configure your agent with prompts that emphasize fairness and transparency' },
+      { text: 'Deploy to see ethical agent behavior in practice' },
+    ],
+  },
+  34: {
+    // Automation
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: null,
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Automation uses agentic AI to automate repetitive business processes, reducing manual work and improving efficiency. Agents can handle routine tasks like data entry, report generation, email processing, and workflow management. Automation agents free human workers to focus on higher-value, creative, and strategic work.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your automation agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to multiple tool blocks representing automated tasks' },
+      { text: 'Create connections between multiple tool blocks to show repetitive task automation' },
+      { text: 'Configure your agent with prompts that handle routine processes autonomously' },
+      { text: 'Deploy to see automation in action' },
+    ],
+  },
+  35: {
+    // Customer Service
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Customer Service agents handle inquiries, provide support, answer questions, and escalate issues when needed. These agents use natural language understanding to interpret customer needs, access knowledge bases to provide accurate information, and maintain professional, helpful interactions. Effective customer service agents improve satisfaction while reducing support costs.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your customer service agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing response planning' },
+      { text: 'Add multiple tool blocks and connections to show inquiry handling and escalation' },
+      { text: 'Configure your agent with prompts that emphasize helpful, professional communication' },
+      { text: 'Deploy to see customer service agent behavior' },
+    ],
+  },
+  36: {
+    // Finance & Trading
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Finance and Trading agents analyze market data, execute trades, manage portfolios, and make investment decisions autonomously. These agents process vast amounts of financial information, identify patterns, assess risk, and execute trades based on sophisticated algorithms. Financial agents operate in high-stakes environments requiring accuracy, speed, and risk management.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your trading agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing trading strategies' },
+      { text: 'Add tool blocks and connections to show data analysis and decision-making' },
+      { text: 'Configure your agent with prompts that emphasize risk assessment and strategic trading' },
+      { text: 'Deploy to see financial agent decision-making' },
+    ],
+  },
+  37: {
+    // Healthcare
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: null,
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Healthcare agents monitor patient data, analyze symptoms, provide health information, and assist clinicians with decision support. These agents must operate with high accuracy, maintain patient privacy, and work within regulatory constraints. Healthcare agents can improve patient outcomes by providing 24/7 monitoring and timely alerts.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your healthcare agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing care planning' },
+      { text: 'Add tool blocks and connections to show patient data analysis and alert generation' },
+      { text: 'Configure your agent with prompts that emphasize accuracy and patient safety' },
+      { text: 'Deploy to see healthcare agent monitoring capabilities' },
+    ],
+  },
+  38: {
+    // Cybersecurity
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onAttacked'],
+    allowedToolBlocks: ['attack', 'plan'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Cybersecurity agents continuously monitor network traffic, detect anomalies, identify threats, and respond to security incidents autonomously. These agents analyze logs, detect patterns indicative of attacks, and take defensive actions. Security agents must operate 24/7, respond quickly to threats, and adapt to evolving attack patterns.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your security agent' },
+      { text: 'Create an', block: 'onAttacked', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing threat response strategies' },
+      { text: 'Add', block: 'attack', textAfter: 'blocks to show defensive actions' },
+      { text: 'Configure your agent to detect threats and respond appropriately' },
+      { text: 'Deploy to see cybersecurity agent threat detection and response' },
+    ],
+  },
+  39: {
+    // Supply Chain Management
+    showBuilder: true,
+    allowedBlocks: ['action', 'agent', 'tool'],
+    allowedActionBlocks: ['onStart'],
+    allowedToolBlocks: ['plan', 'collect', 'move'],
+    showAgentBlock: true,
+    showToolBlock: true,
+    showConnections: true,
+    lessonBlurb: 'Supply Chain Management agents optimize logistics, manage inventory, process orders, and coordinate shipments autonomously. These agents analyze demand patterns, optimize routes, manage stock levels, and coordinate with suppliers and distributors. Supply chain agents improve efficiency, reduce costs, and ensure timely delivery of goods.',
+    lessonGuidelines: [
+      { text: 'Enter an Agent ID for your supply chain agent' },
+      { text: 'Create an', block: 'onStart', textAfter: 'block connected to an', block: 'agent', textAfter: 'block' },
+      { text: 'Connect your agent to', block: 'plan', textAfter: 'blocks representing logistics planning' },
+      { text: 'Add', block: 'collect', textAfter: 'and', block: 'move', textAfter: 'blocks to show inventory and shipping operations' },
+      { text: 'Configure your agent to optimize supply chain operations' },
+      { text: 'Deploy to see supply chain optimization in action' },
+    ],
+  },
 };
 
 export default function LessonPage() {
@@ -62,6 +771,28 @@ export default function LessonPage() {
   const theme = useTheme();
   const lessonId = parseInt(params.id);
   const lesson = LESSONS.find(l => l.id === lessonId);
+  
+  // Starred lessons state
+  const [starredLessons, setStarredLessons] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('starredLessons');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  
+  const isStarred = starredLessons.includes(lessonId);
+  
+  const toggleStar = () => {
+    const newStarred = isStarred
+      ? starredLessons.filter(id => id !== lessonId)
+      : [...starredLessons, lessonId];
+    setStarredLessons(newStarred);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('starredLessons', JSON.stringify(newStarred));
+    }
+    toast.success(isStarred ? 'Lesson unstarred' : 'Lesson starred');
+  };
   const config = LESSON_CONFIGS[lessonId] || {
     showBuilder: true,
     allowedBlocks: ['action', 'agent', 'tool'],
@@ -70,6 +801,7 @@ export default function LessonPage() {
     showAgentBlock: true,
     showToolBlock: true,
     showConnections: true,
+    lessonBlurb: lesson?.description || 'Learn about agentic AI concepts and build agents using the visual builder.',
     lessonGuidelines: [
       { text: 'Review the lesson content and understand the core concepts' },
       { text: 'Use the builder on the right to create your agent following the lesson guidelines' },
@@ -96,7 +828,7 @@ export default function LessonPage() {
       {/* Lesson Content */}
       {config.showBuilder ? (
         <div className="flex-1 min-h-0 overflow-hidden">
-          <LessonBuilder lesson={lesson} config={config} />
+          <LessonBuilder lesson={lesson} config={config} isStarred={isStarred} onToggleStar={toggleStar} />
         </div>
       ) : (
         <div className="max-w-7xl mx-auto p-6">
@@ -235,7 +967,7 @@ const INSTRUCTIONS = [
 ];
 
 // Full Builder Component for Lessons
-function LessonBuilder({ lesson, config }) {
+function LessonBuilder({ lesson, config, isStarred, onToggleStar }) {
   const theme = useTheme();
   const [isClient, setIsClient] = useState(false);
 
@@ -313,36 +1045,140 @@ function LessonBuilder({ lesson, config }) {
       let isComplete = false;
       
       // Check agent ID entered
-      if (guidelineText.includes('Agent ID') || guidelineText.includes('agent a name')) {
+      if (guidelineText.includes('Agent ID') || guidelineText.includes('agent a name') || guidelineText.includes('Enter an Agent ID')) {
         isComplete = agentId.trim().length > 0;
       }
       // Check for connections FIRST (before checking block existence)
       // This ensures connection tasks require actual connections, not just block placement
       else if (guidelineText.includes('Connect')) {
-        if (blockId === 'agent' && (guidelineText.includes('onStart') || guidelineText.includes('Connect it to an'))) {
-          // Check if onStart is connected to agent block
-          // Must have: onStart block exists AND agent block exists AND there's a connection from onStart to agent
+        // Check if onStart is connected to agent
+        if (blockId === 'agent' && (guidelineText.includes('onStart') || guidelineText.includes('Connect it to an') || guidelineText.includes('connected to an'))) {
           const onStartBlock = blocks.find(b => b.blockType === 'action' && b.action_type === 'onStart');
           const agentBlock = blocks.find(b => b.blockType === 'agent');
           isComplete = onStartBlock && agentBlock && connections.some(c => c.from === onStartBlock.id && c.to === agentBlock.id);
-        } else if (blockId === 'move' && guidelineText.includes('agent')) {
-          // Check if agent is connected to move
+        }
+        // Check if onAttacked is connected to agent
+        else if (blockId === 'agent' && guidelineText.includes('onAttacked')) {
+          const onAttackedBlock = blocks.find(b => b.blockType === 'action' && b.action_type === 'onAttacked');
           const agentBlock = blocks.find(b => b.blockType === 'agent');
+          isComplete = onAttackedBlock && agentBlock && connections.some(c => c.from === onAttackedBlock.id && c.to === agentBlock.id);
+        }
+        // Check if agent is connected to a tool block
+        else if ((blockId === 'move' || blockId === 'plan' || blockId === 'attack' || blockId === 'collect') && guidelineText.includes('agent')) {
+          const agentBlock = blocks.find(b => b.blockType === 'agent');
+          const toolBlock = blocks.find(b => {
+            if (blockId === 'move') return b.blockType === 'tool' && b.tool_type === 'move';
+            if (blockId === 'plan') return b.blockType === 'tool' && b.tool_type === 'plan';
+            if (blockId === 'attack') return b.blockType === 'tool' && b.tool_type === 'attack';
+            if (blockId === 'collect') return b.blockType === 'tool' && b.tool_type === 'collect';
+            return false;
+          });
+          isComplete = agentBlock && toolBlock && connections.some(c => c.from === agentBlock.id && c.to === toolBlock.id);
+        }
+        // Check if plan is connected to move
+        else if (blockId === 'move' && guidelineText.includes('plan')) {
+          const planBlock = blocks.find(b => b.blockType === 'tool' && b.tool_type === 'plan');
           const moveBlock = blocks.find(b => b.blockType === 'tool' && b.tool_type === 'move');
-          isComplete = agentBlock && moveBlock && connections.some(c => c.from === agentBlock.id && c.to === moveBlock.id);
+          isComplete = planBlock && moveBlock && connections.some(c => c.from === planBlock.id && c.to === moveBlock.id);
+        }
+        // Generic connection check - agent connected to any tool
+        else if (guidelineText.includes('Connect your agent to') || guidelineText.includes('Connect agents to')) {
+          const agentBlock = blocks.find(b => b.blockType === 'agent');
+          const hasToolConnection = agentBlock && connections.some(c => {
+            const toBlock = blocks.find(b => b.id === c.to);
+            return c.from === agentBlock.id && toBlock && toBlock.blockType === 'tool';
+          });
+          isComplete = hasToolConnection;
+        }
+        // Check for multiple agents
+        else if (guidelineText.includes('multiple') && guidelineText.includes('agent')) {
+          const agentBlocks = blocks.filter(b => b.blockType === 'agent');
+          isComplete = agentBlocks.length >= 2;
         }
       }
       // Check for specific blocks placed (only if not a connection task)
       else if (blockId === 'onStart') {
         isComplete = blocks.some(b => b.blockType === 'action' && b.action_type === 'onStart');
       }
+      else if (blockId === 'onAttacked') {
+        isComplete = blocks.some(b => b.blockType === 'action' && b.action_type === 'onAttacked');
+      }
       else if (blockId === 'agent' && !guidelineText.includes('Connect')) {
-        // Only check block existence if it's not a connection task
         isComplete = blocks.some(b => b.blockType === 'agent');
       }
       else if (blockId === 'move' && !guidelineText.includes('Connect')) {
-        // Only check block existence if it's not a connection task
         isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'move');
+      }
+      else if (blockId === 'plan' && !guidelineText.includes('Connect')) {
+        isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'plan');
+      }
+      else if (blockId === 'attack' && !guidelineText.includes('Connect')) {
+        isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'attack');
+      }
+      else if (blockId === 'collect' && !guidelineText.includes('Connect')) {
+        isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === 'collect');
+      }
+      // Check for multiple blocks of a type
+      else if (guidelineText.includes('multiple')) {
+        if (blockId === 'agent' || guidelineText.includes('multiple') && guidelineText.includes('agent')) {
+          isComplete = blocks.filter(b => b.blockType === 'agent').length >= 2;
+        } else if (blockId === 'onStart') {
+          isComplete = blocks.filter(b => b.blockType === 'action' && b.action_type === 'onStart').length >= 2;
+        } else if (guidelineText.includes('tool blocks')) {
+          // Check for multiple tool blocks
+          const toolBlocks = blocks.filter(b => b.blockType === 'tool');
+          isComplete = toolBlocks.length >= 2;
+        }
+      }
+      // Check for agent configuration (has system_prompt and user_prompt)
+      else if ((guidelineText.includes('Configure') && guidelineText.includes('agent')) || 
+               guidelineText.includes('Configure your agent with')) {
+        const agentBlock = blocks.find(b => b.blockType === 'agent');
+        isComplete = agentBlock && agentBlock.system_prompt && agentBlock.user_prompt && 
+                     agentBlock.system_prompt.trim().length > 0 && agentBlock.user_prompt.trim().length > 0;
+      }
+      // Check for double-click (agent configuration opened and saved)
+      else if (guidelineText.includes('Double-click') || (guidelineText.includes('configure') && guidelineText.includes('prompt'))) {
+        const agentBlock = blocks.find(b => b.blockType === 'agent');
+        isComplete = agentBlock && agentBlock.system_prompt && agentBlock.user_prompt && 
+                     agentBlock.system_prompt.trim().length > 0 && agentBlock.user_prompt.trim().length > 0;
+      }
+      // Check for "Add" tasks with blocks
+      else if (guidelineText.includes('Add') && blockId) {
+        if (blockId === 'plan' || blockId === 'move' || blockId === 'attack' || blockId === 'collect') {
+          const toolType = blockId === 'plan' ? 'plan' : blockId === 'move' ? 'move' : blockId === 'attack' ? 'attack' : 'collect';
+          isComplete = blocks.some(b => b.blockType === 'tool' && b.tool_type === toolType);
+        }
+      }
+      // Check for "Create" tasks
+      else if (guidelineText.includes('Create') && !guidelineText.includes('Connect')) {
+        if (blockId === 'onStart') {
+          isComplete = blocks.some(b => b.blockType === 'action' && b.action_type === 'onStart');
+        } else if (blockId === 'agent') {
+          isComplete = blocks.some(b => b.blockType === 'agent');
+        } else if (guidelineText.includes('loop') || guidelineText.includes('cycle')) {
+          // Check for loops - agent connected to tool, tool connected back to agent
+          const agentBlock = blocks.find(b => b.blockType === 'agent');
+          if (agentBlock) {
+            const hasToolConnection = connections.some(c => c.from === agentBlock.id);
+            const toolBlocks = blocks.filter(b => b.blockType === 'tool');
+            const hasLoop = toolBlocks.some(tool => {
+              const toolToAgent = connections.some(c => c.from === tool.id && c.to === agentBlock.id);
+              const agentToTool = connections.some(c => c.from === agentBlock.id && c.to === tool.id);
+              return toolToAgent && agentToTool;
+            });
+            isComplete = hasToolConnection && hasLoop;
+          }
+        } else if (guidelineText.includes('feedback loop')) {
+          // Check for feedback loop: agent -> plan -> agent
+          const agentBlock = blocks.find(b => b.blockType === 'agent');
+          const planBlock = blocks.find(b => b.blockType === 'tool' && b.tool_type === 'plan');
+          if (agentBlock && planBlock) {
+            const agentToPlan = connections.some(c => c.from === agentBlock.id && c.to === planBlock.id);
+            const planToAgent = connections.some(c => c.from === planBlock.id && c.to === agentBlock.id);
+            isComplete = agentToPlan && planToAgent;
+          }
+        }
       }
       
       progress[index] = isComplete;
@@ -1099,19 +1935,41 @@ function LessonBuilder({ lesson, config }) {
             <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${theme.bg.secondary}`}>
               {/* Lesson Plan & Goals Section */}
               <div className={`flex-1 overflow-y-auto px-4 py-4 min-h-0`}>
-                <h2 className={`text-2xl font-bold ${theme.text.primary} mb-4`}>
-                  {lesson.title}
-                </h2>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className={`text-2xl font-bold ${theme.text.primary}`}>
+                    {lesson.title}
+                  </h2>
+                  <button
+                    onClick={onToggleStar}
+                    className={`transition-colors ${
+                      isStarred
+                        ? 'text-yellow-400 hover:text-yellow-500'
+                        : 'text-gray-400 hover:text-yellow-400'
+                    }`}
+                    title={isStarred ? 'Unstar this lesson' : 'Star this lesson'}
+                  >
+                    <svg 
+                      className="w-6 h-6" 
+                      fill={isStarred ? 'currentColor' : 'none'} 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  </button>
+                </div>
                 
                 {/* Agentic AI Blurb */}
-                <div className={`mb-4 ${theme.bg.primary} rounded-lg p-4 border ${theme.border.secondary}`}>
-                  <h3 className={`text-sm font-semibold uppercase tracking-wide ${theme.text.secondary} mb-2`}>
-                    About Agentic AI
-                  </h3>
-                  <p className={`text-base leading-relaxed ${theme.text.primary}`}>
-                    Agentic AI refers to AI systems that can accomplish goals with limited supervision. Unlike traditional AI that responds to prompts, agentic AI can autonomously plan, execute actions, and adapt to achieve objectives. These agents can perceive their environment, reason about situations, make decisions, and take actions—all while learning and improving over time.
-                  </p>
-                </div>
+                {config.lessonBlurb && (
+                  <div className={`mb-4 ${theme.bg.primary} rounded-lg p-4 border ${theme.border.secondary}`}>
+                    <h3 className={`text-sm font-semibold uppercase tracking-wide ${theme.text.secondary} mb-2`}>
+                      About {lesson.title}
+                    </h3>
+                    <p className={`text-base leading-relaxed ${theme.text.primary}`}>
+                      {config.lessonBlurb}
+                    </p>
+                  </div>
+                )}
 
                 {/* Lesson Plan / What to Do */}
                 <div className={`mb-4 ${theme.bg.primary} rounded-lg p-4 border-2 ${theme.isDark ? 'border-blue-500' : 'border-blue-400'} shadow-md`}>
