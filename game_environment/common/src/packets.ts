@@ -52,6 +52,8 @@ export interface PlayerData {
     level?: number; // Calculated level
     kills?: number; // Kill count (persists through death)
     attacking?: boolean; // Is player attacking (for animations)
+    speechText?: string; // Speech bubble text
+    speechTimestamp?: number; // When speech was set (for auto-clearing)
 }
 
 export interface BulletData {

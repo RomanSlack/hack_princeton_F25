@@ -84,7 +84,8 @@ export class AgentBridge {
             actions: {
                 switchWeapon: false,
                 pickup: false,
-                reload: false
+                reload: false,
+                interact: false
             }
         };
 
@@ -106,11 +107,16 @@ export class AgentBridge {
                 break;
             case "plan":
                 // Plan doesn't directly affect input, just store it
-                state.currentPlan = action.parameters.plan;
+                state.currentPlan = action.parameters.plan || null;
                 break;
             case "search":
                 // Search doesn't directly affect game input, results come from MCP
                 console.log(`[AgentBridge] Agent ${agentId} searched for: ${action.parameters.query}`);
+                break;
+            case "mystery":
+                // Mystery tool is converted to speak in backend, but handle it here just in case
+                // This shouldn't normally be reached since backend converts it to speak
+                console.log(`[AgentBridge] Agent ${agentId} executed mystery tool`);
                 break;
             default:
                 console.warn(`[AgentBridge] Unknown action type: ${action.tool_type}`);
@@ -254,11 +260,14 @@ export class AgentBridge {
     }
 
     /**
-     * Apply speak command - agent speaks text, checks for nearby gates to unlock
+     * Apply speak command - agent speaks text, checks for nearby gates to unlock, and displays speech bubble
      */
     private applySpeakCommand(input: InputPacket, action: BackendAction, agent: AIAgent): void {
         const text = action.parameters.text || "";
         console.log(`[AgentBridge] Agent ${agent.username} speaks: "${text}"`);
+
+        // Set speech text for speech bubble display
+        agent.setSpeechText(text);
 
         // Check for nearby gates within speaking range (30 units)
         const speakRange = 30;

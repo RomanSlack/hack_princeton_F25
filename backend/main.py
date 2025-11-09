@@ -307,7 +307,7 @@ def create_llm_provider() -> LLMProvider:
 class ToolConnection(BaseModel):
     """Connection from an Agent block to a Tool block"""
     tool_id: str = Field(..., description="ID of the tool block to connect to")
-    tool_name: Literal["move", "attack", "collect", "plan", "search", "switch_weapon", "speak"] = Field(
+    tool_name: Literal["move", "attack", "collect", "plan", "search", "switch_weapon", "speak", "mystery"] = Field(
         ..., description="Name of the tool (must match the tool block's tool_type)"
     )
 
@@ -346,7 +346,7 @@ class ToolBlock(BaseModel):
     """Tool block - executes a game action"""
     id: str = Field(..., description="Unique identifier for this block")
     type: Literal["tool"] = "tool"
-    tool_type: Literal["move", "attack", "collect", "plan", "search", "switch_weapon", "speak"] = Field(
+    tool_type: Literal["move", "attack", "collect", "plan", "search", "switch_weapon", "speak", "mystery"] = Field(
         ..., description="Type of tool action"
     )
     parameters: Dict[str, str] = Field(
@@ -455,7 +455,7 @@ class NextStepRequest(BaseModel):
 
 class ToolAction(BaseModel):
     """Response model for a tool action"""
-    tool_type: Literal["move", "attack", "collect", "plan", "search", "switch_weapon", "speak"]
+    tool_type: Literal["move", "attack", "collect", "plan", "search", "switch_weapon", "speak", "mystery"]
     parameters: Dict[str, Any] = Field(
         default_factory=dict,
         description="Parameters for the tool (e.g., direction for move, target for attack, text for speak)"
@@ -594,6 +594,42 @@ def game_state_to_llm_format(game_state: GameState) -> str:
         return "No specific game state information available."
 
     return " | ".join(parts)
+
+
+async def execute_mystery_action() -> str:
+    """
+    Execute mystery action by fetching a cat fact from Dedalus MCP marketplace.
+    Returns the cat fact text, or a fallback message if the request fails.
+    """
+    try:
+        logger.info("Executing mystery action - fetching cat fact from MCP")
+        
+        # Use Dedalus SDK with MCP server for cat facts
+        from dedalus_labs import AsyncDedalus, DedalusRunner
+        
+        client = AsyncDedalus()
+        runner = DedalusRunner(client)
+        
+        # Fetch cat fact using MCP server
+        result = await asyncio.wait_for(
+            runner.run(
+                input="Give me a cat fact",
+                model="openai/gpt-4o-mini",  # Using gpt-4o-mini (gpt-5-mini doesn't exist yet)
+                mcp_servers=["danny/cat-facts"]
+            ),
+            timeout=LLM_TIMEOUT
+        )
+        
+        cat_fact = result.final_output.strip()
+        logger.info(f"Cat fact retrieved: {cat_fact}")
+        return cat_fact
+        
+    except asyncio.TimeoutError:
+        logger.warning("Mystery action timeout - using fallback message")
+        return "🐱 Cats are mysterious creatures!"
+    except Exception as e:
+        logger.error(f"Error executing mystery action: {e}")
+        return "🐱 Cats are mysterious creatures!"
 
 
 async def execute_agent_block(
@@ -769,7 +805,8 @@ async def execute_agent_block(
         f"- Attack: {{\"reasoning\": \"Shooting enemy\", \"action\": \"attack\", \"parameters\": {{\"target_player_id\": \"3\"}}}}\n"
         f"- Collect: {{\"reasoning\": \"Picking up ammo\", \"action\": \"collect\", \"parameters\": {{}}}}\n"
         f"- Switch weapon: {{\"reasoning\": \"Switching to fists since pistol is empty\", \"action\": \"switch_weapon\", \"parameters\": {{}}}}\n"
-        f"- Speak: {{\"reasoning\": \"Trying to unlock the gate\", \"action\": \"speak\", \"parameters\": {{\"text\": \"your password here\"}}}}"
+        f"- Speak: {{\"reasoning\": \"Trying to unlock the gate\", \"action\": \"speak\", \"parameters\": {{\"text\": \"your password here\"}}}}\n"
+        f"- Mystery: {{\"reasoning\": \"Sharing a fun cat fact\", \"action\": \"mystery\", \"parameters\": {{}}}}"
     )
 
     full_input = agent_block.system_prompt + "\n\n" + user_input
@@ -1582,10 +1619,24 @@ async def next_step_for_agents(request: NextStepRequest) -> NextStepResponse:
     if tool_choice == "search" and "query" in parameters:
         logger.info(f"Agent {agent_id} searching for: {parameters['query']}")
 
-    # Store this action in the agent's action history
+    # Handle mystery tool - execute cat fact fetch and convert to speak command
+    # Do this BEFORE storing in action history so we record the original mystery choice
+    original_tool_choice = tool_choice
+    if tool_choice == "mystery":
+        logger.info(f"Executing mystery tool for agent {agent_id}")
+        
+        # Execute mystery action to get cat fact
+        cat_fact = await execute_mystery_action()
+        
+        # Convert mystery tool to speak command with cat fact
+        tool_choice = "speak"
+        parameters = {"text": cat_fact}
+        logger.info(f"Mystery tool converted to speak: {cat_fact}")
+
+    # Store this action in the agent's action history (store original choice, not converted)
     action_record = {
-        "action": tool_choice,
-        "parameters": parameters,
+        "action": original_tool_choice,  # Store "mystery" not "speak"
+        "parameters": parameters if original_tool_choice != "mystery" else {},  # Mystery has no params
         "reasoning": reasoning
     }
     agent_state.past_actions.append(action_record)

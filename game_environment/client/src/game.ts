@@ -16,6 +16,8 @@ interface RenderObject {
     rotation: number;
     nameText?: PIXI.Text;
     xpText?: PIXI.Text;
+    speechText?: PIXI.Text;
+    speechBubble?: PIXI.Graphics;
     leavesContainer?: PIXI.Container; // Separate container for tree leaves (rendered above players)
     weaponSprite?: PIXI.Graphics;
     punchAnimation?: { startTime: number; duration: number };
@@ -226,6 +228,14 @@ export class GameClient {
                     this.app.stage.removeChild(obj.xpText);
                     obj.xpText.destroy();
                 }
+                if (obj.speechText) {
+                    this.app.stage.removeChild(obj.speechText);
+                    obj.speechText.destroy();
+                }
+                if (obj.speechBubble) {
+                    this.app.stage.removeChild(obj.speechBubble);
+                    obj.speechBubble.destroy();
+                }
                 this.playerSprites.delete(id);
             }
         }
@@ -258,6 +268,38 @@ export class GameClient {
             // Update XP text
             if (renderObj.xpText) {
                 renderObj.xpText.text = `${playerData.xp || 0} XP`;
+            }
+
+            // Update speech bubble
+            if (renderObj.speechText && renderObj.speechBubble) {
+                if (playerData.speechText && playerData.speechText.length > 0) {
+                    // Show speech bubble
+                    renderObj.speechText.text = playerData.speechText;
+                    renderObj.speechText.visible = true;
+                    renderObj.speechBubble.visible = true;
+
+                    // Update bubble size to fit text
+                    const textMetrics = renderObj.speechText.getBounds();
+                    const padding = 1.5;
+                    const bubbleWidth = textMetrics.width / 2;
+                    const bubbleHeight = textMetrics.height / 2;
+
+                    // Redraw bubble background
+                    renderObj.speechBubble.clear();
+                    renderObj.speechBubble.roundRect(
+                        -bubbleWidth / 2,
+                        -bubbleHeight,
+                        bubbleWidth,
+                        bubbleHeight,
+                        2
+                    );
+                    renderObj.speechBubble.fill({ color: 0xffffff, alpha: 0.95 });
+                    renderObj.speechBubble.stroke({ color: 0x000000, width: 0.2 });
+                } else {
+                    // Hide speech bubble
+                    renderObj.speechText.visible = false;
+                    renderObj.speechBubble.visible = false;
+                }
             }
 
             // Trigger punch animation if attacking with fists
@@ -508,6 +550,16 @@ export class GameClient {
                 obj.xpText.scale.set(this.camera.zoom);
             }
 
+            // Position speech bubble above name text
+            if (obj.speechText && obj.speechBubble) {
+                const speechWorldPos = Vec.add(obj.position, Vec(0, -18));
+                const speechScreenPos = this.camera.worldToScreen(speechWorldPos);
+                obj.speechText.position.set(speechScreenPos.x, speechScreenPos.y);
+                obj.speechText.scale.set(this.camera.zoom);
+                obj.speechBubble.position.set(speechScreenPos.x, speechScreenPos.y);
+                obj.speechBubble.scale.set(this.camera.zoom);
+            }
+
             // Animate punch if active
             if (obj.punchAnimation && obj.weaponSprite) {
                 const elapsed = Date.now() - obj.punchAnimation.startTime;
@@ -652,19 +704,42 @@ export class GameClient {
         xpText.resolution = 4;
         xpText.anchor.set(0.5, 1); // Anchor at bottom center
 
+        // Speech bubble background (initially hidden)
+        const speechBubble = new PIXI.Graphics();
+        speechBubble.visible = false;
+
+        // Speech text (initially hidden)
+        const speechText = new PIXI.Text({
+            text: "",
+            style: {
+                fontSize: 4,
+                fill: 0x000000,
+                wordWrap: true,
+                wordWrapWidth: 30,
+                align: 'center'
+            }
+        });
+        speechText.resolution = 4;
+        speechText.anchor.set(0.5, 1);
+        speechText.visible = false;
+
         container.addChild(shadow);
         container.addChild(body);
         container.addChild(highlight);
         container.addChild(direction);
         container.addChild(weaponSprite);
 
-        // Add nameText and xpText separately to stage so they don't rotate with player
+        // Add nameText, xpText, speechBubble, and speechText separately to stage so they don't rotate with player
         container.zIndex = 20; // Game objects layer
         nameText.zIndex = 200; // UI layer (above lighting)
         xpText.zIndex = 200; // UI layer (above lighting)
+        speechBubble.zIndex = 250; // UI layer (above name/xp)
+        speechText.zIndex = 251; // UI layer (above bubble)
         this.app.stage.addChild(container);
         this.app.stage.addChild(nameText);
         this.app.stage.addChild(xpText);
+        this.app.stage.addChild(speechBubble);
+        this.app.stage.addChild(speechText);
 
         return {
             container,
@@ -672,6 +747,8 @@ export class GameClient {
             rotation: playerData.rotation,
             nameText,
             xpText,
+            speechText,
+            speechBubble,
             weaponSprite
         };
     }

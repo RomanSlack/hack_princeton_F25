@@ -34,6 +34,10 @@ export class AIAgent extends GameObject {
     moving: boolean = false;
     attacking: boolean = false;
 
+    // Speech bubble properties
+    speechText: string | null = null;
+    speechTimestamp: number = 0;
+
     // Smooth movement properties
     moveTarget: Vector | null = null; // Target position for smooth movement
     moveStartTime: number = 0; // When movement started
@@ -262,6 +266,15 @@ export class AIAgent extends GameObject {
 
         const now = Date.now();
 
+        // Clear expired speech text (after 5 seconds)
+        if (this.speechText && this.speechTimestamp > 0) {
+            const speechAge = now - this.speechTimestamp;
+            if (speechAge > 5000) {
+                this.speechText = null;
+                this.speechTimestamp = 0;
+            }
+        }
+
         // Update weapons
         for (const weapon of this.weapons) {
             if (weapon) {
@@ -272,6 +285,14 @@ export class AIAgent extends GameObject {
                 }
             }
         }
+    }
+
+    /**
+     * Set speech text with current timestamp
+     */
+    setSpeechText(text: string): void {
+        this.speechText = text;
+        this.speechTimestamp = Date.now();
     }
 
     addWeapon(gunType: string): boolean {
@@ -549,7 +570,9 @@ export class AIAgent extends GameObject {
             xp: this.xp,
             level: this.getLevel(),
             kills: this.kills,
-            attacking: this.attacking
+            attacking: this.attacking,
+            speechText: this.speechText || undefined,
+            speechTimestamp: this.speechTimestamp > 0 ? this.speechTimestamp : undefined
         };
     }
 }
